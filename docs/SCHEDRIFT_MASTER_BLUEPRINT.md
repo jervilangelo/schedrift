@@ -247,3 +247,28 @@ The 17 criteria from the brief: launch on Windows; import `.mpp`; automatic Gant
 
 ## 14. Security and data hygiene
 `.gitignore` excludes `data/`, `vendor/`, `*.mpp`, `*.mpx`, `tests/fixtures/mpxj/` and `.env*`. Only synthetic samples (`samples/`) are committed. No credentials anywhere in the repo.
+
+## 15. Implementation status (v1.0)
+
+All 17 acceptance criteria are implemented and covered by tests (see `docs/TESTING.md`).
+
+| Phase | Status |
+|---|---|
+| 1 Blueprint | Done |
+| 2 PoC: MPXJ → MSPDI | Done: about 1 s per file. All 6 MPXJ corpus files recalculate to the same dates as MS Project |
+| 3 Setup | Done: Vite 8, React 19, TS 7 strict, Tailwind 4, Vitest, Playwright, `Schedrift.cmd` |
+| 4 Gantt | Done: custom SVG, virtualized rows, Week/Month/Quarter/Fit zoom, Executive/Detailed, drift band |
+| 5 Engine | Done: 40+ unit tests |
+| 6 Simulation | Done: multi-task scenario, start-delay floors, duration extensions, driving chain |
+| 7 Data editing | Done: inline cells, MS Project-style predecessor text, dependency dialog, cycle rejection |
+| 8 Presentation | Done: full screen, 40 px rows, auto Fit zoom, hideable task list |
+| 9 Testing | Done: Vitest + 13 Playwright scenarios |
+
+Decisions made during the build:
+- **Fit zoom** was added beside Week/Month/Quarter. Presentation mode switches to it, so the audience always sees Go-Live.
+- The **Go-Live strip** also appears in the Data view, so edits show their effect immediately.
+- An imported milestone with a non-zero duration (allowed by MS Project) keeps its duration.
+- The schedule check compares positions in **working time** (Fri 17:00 ≡ Mon 08:00), within about one working hour.
+- shadcn/ui was replaced by a handful of hand-written primitives with the same API style. The app needs about six components, and they keep the bundle small.
+
+Skills: TasteSkill (design-taste-frontend, app-screen rules) guided the visual design. UI/UX Pro Max, Superpowers and the Playwright CLI skill were not installed in this environment. Their roles were covered directly: Playwright through `@playwright/test`, and planning, review and TDD inline.
