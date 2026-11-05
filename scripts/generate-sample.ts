@@ -121,7 +121,7 @@ for (const t of plan.tasks.filter((x) => x.summary)) {
 
 const check = schedule(plan);
 const gl = check.byUid.get(26)!;
-const out = resolve(root, 'samples/atlas-erp-rollout.xml');
+const out = resolve(root, 'public/samples/atlas-erp-rollout.xml');
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, writeMspdi(plan));
 console.log(`Wrote ${out}`);

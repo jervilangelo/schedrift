@@ -18,7 +18,7 @@ const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.mpp'
 const ready = !!findJava() && mpxjAvailable() && files.length > 0;
 
 describe.skipIf(!ready)('real .mpp files via MPXJ', () => {
-  it.each(files)('%s imports and schedules', async (f) => {
+  it.each(files)('%s imports and schedules', async (f: string) => {
     const xml: string = await convertToMspdi(readFileSync(join(dir, f)), f);
     const p = importMspdi(xml, f);
     expect(p.tasks.length).toBeGreaterThan(0);

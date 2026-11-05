@@ -11,7 +11,7 @@ import { ROOT } from './java.mjs';
 const PORT = Number(process.env.SCHEDRIFT_PORT || 5178);
 const HOST = '127.0.0.1';
 const DIST = join(ROOT, 'dist');
-const OPEN = process.argv.includes('--open');
+const OPEN = process.argv.includes('--open') && !process.env.SCHEDRIFT_NO_OPEN;
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json',

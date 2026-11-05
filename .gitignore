@@ -11,10 +11,10 @@ data/
 *.mpp
 *.mpt
 *.mpx
-!samples/*.mpx
+!public/samples/*.mpx
 tests/fixtures/mpxj/
 *.schedrift.json
-!samples/*.schedrift.json
+!public/samples/*.schedrift.json
 
 # test output
 test-results/
@@ -29,4 +29,6 @@ coverage/
 .DS_Store
 Thumbs.db
 .vscode/
+.shots/
+.taste-skill/
 .idea/

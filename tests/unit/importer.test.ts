@@ -9,7 +9,7 @@ import { analyzeImpact } from '../../src/scheduling/impact';
 import { formatInstantISO } from '../../src/scheduling/time';
 import { at, makeProject } from './helpers';
 
-const sampleXml = readFileSync(resolve(__dirname, '../../samples/atlas-erp-rollout.xml'), 'utf8');
+const sampleXml = readFileSync(resolve(__dirname, '../../public/samples/atlas-erp-rollout.xml'), 'utf8');
 
 describe('MSPDI parsing', () => {
   it('parses ISO-8601 durations', () => {

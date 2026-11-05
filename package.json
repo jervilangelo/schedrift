@@ -5,6 +5,7 @@
   "description": "Schedrift: local-first interactive Gantt chart and dependency-driven delay simulation for Microsoft Project schedules.",
   "type": "module",
   "license": "MIT",
+  "author": "JervilAngelo",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jervilangelo/schedrift.git"
@@ -22,6 +23,7 @@
     "sample": "tsx scripts/generate-sample.ts"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-sans": "^5.3.0",
     "fast-xml-parser": "^5.12.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
