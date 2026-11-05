@@ -87,6 +87,18 @@ describe('MSPDI parsing', () => {
     expect(codes).toEqual(expect.arrayContaining(['missing-predecessor', 'duplicate-uid', 'invalid-date']));
   });
 
+  it('flags resource-leveling delays and reports the task as differing from the file', () => {
+    // MS Project stored Training materials 5 days later because of a leveling delay.
+    const xml = sampleXml.replace(
+      /(<UID>20<\/UID>[\s\S]*?<Start>)2026-11-27T08:00:00(<\/Start>\s*<Finish>)2026-12-11T17:00:00/,
+      '$12026-12-04T08:00:00$22026-12-18T17:00:00',
+    ).replace(/(<UID>20<\/UID>[\s\S]*?<CalendarUID>-1<\/CalendarUID>)/, '$1\n      <LevelingDelay>24000</LevelingDelay>');
+    const p = importMspdi(xml, 'leveled.xml');
+    expect(p.tasks.find((t) => t.uid === 20)!.levelingDelay).toBe(5);
+    expect(p.importReport.items.find((i) => i.code === 'leveling-delay')?.taskUids).toEqual([20]);
+    expect(p.importReport.scheduleCheck).toMatchObject({ compared: 23, matched: 22, mismatchedUids: [20] });
+  });
+
   it('flags manual tasks and keeps them pinned', () => {
     const p = makeProject([{ uid: 1, dur: 3 }, { uid: 2, dur: 1, preds: [1], manual: true, start: at(2027, 1, 20) }]);
     p.tasks[1]!.finish = at(2027, 1, 20, 17);

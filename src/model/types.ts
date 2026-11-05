@@ -53,6 +53,8 @@ export interface Task {
   actualFinish?: Instant;
   baselineStart?: Instant;
   baselineFinish?: Instant;
+  /** Resource-leveling delay from MS Project (working days). Reported, not applied. */
+  levelingDelay?: number;
   predecessors: Link[];
 }
 

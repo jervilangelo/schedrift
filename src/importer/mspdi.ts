@@ -188,7 +188,7 @@ export function parseMspdi(xml: string, sourceFileName: string): Project {
   const tasks: Task[] = [];
   const stack: Task[] = [];
   const dropped = { null: 0, external: 0 };
-  const flagged = { manual: [] as number[], inactive: [] as number[], alap: [] as number[], elapsed: [] as number[], percentLag: [] as number[], split: [] as number[], subproject: [] as number[], badDates: [] as number[], effort: [] as number[] };
+  const flagged = { manual: [] as number[], inactive: [] as number[], alap: [] as number[], elapsed: [] as number[], percentLag: [] as number[], split: [] as number[], subproject: [] as number[], badDates: [] as number[], effort: [] as number[], leveling: [] as number[] };
   let projectStart = parseInstant(str(root, 'StartDate'));
   const percentLags: { link: Link; percent: number }[] = [];
 
@@ -282,6 +282,11 @@ export function parseMspdi(xml: string, sourceFileName: string): Project {
       report.push({ level: 'warning', code: 'calendar-unknown', message: `"${name}" uses calendar UID ${calUid}, which is not in the file. The project calendar is used.`, taskUids: [uid] });
     }
     if (bool(rt, 'EffortDriven') && str(rt, 'Type') === '2') flagged.effort.push(uid);
+    const levelingDelay = num(rt, 'LevelingDelay') ?? 0; // tenths of a minute
+    if (levelingDelay > 0) {
+      flagged.leveling.push(uid);
+      task.levelingDelay = Math.round((levelingDelay / 10 / minutesPerDay) * 100) / 100;
+    }
 
     while (stack.length && stack[stack.length - 1]!.outlineLevel >= level) stack.pop();
     task.parentUid = stack.length ? stack[stack.length - 1]!.uid : null;
@@ -320,6 +325,7 @@ export function parseMspdi(xml: string, sourceFileName: string): Project {
   add('info', 'percent-lag', flagged.percentLag, '{n} link(s) use percentage lag, converted to working days.');
   add('warning', 'subproject', flagged.subproject, '{n} inserted subproject(s) are not expanded.');
   add('info', 'split-tasks', flagged.split, '{n} task(s) may be split. Splits are not modelled.');
+  add('warning', 'leveling-delay', flagged.leveling, '{n} task(s) carry a resource-leveling delay from MS Project. Schedrift does not apply leveling delays, so these tasks may start earlier than in the file.');
   if (dropped.null) report.push({ level: 'info', code: 'null-tasks', message: `${dropped.null} blank row(s) skipped.` });
   if (dropped.external) report.push({ level: 'warning', code: 'external-tasks', message: `${dropped.external} external (cross-project) task(s) and their links are not imported.` });
 

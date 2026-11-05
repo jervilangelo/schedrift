@@ -187,6 +187,23 @@ test('reports circular dependencies on import without failing', async ({ page })
   await expect(page.getByTestId('gantt')).toBeVisible();
 });
 
+test('explains tasks whose recalculated dates differ from the file', async ({ page }) => {
+  const xml = readFileSync(join(process.cwd(), 'public/samples/atlas-erp-rollout.xml'), 'utf8')
+    .replace(/(<UID>20<\/UID>[\s\S]*?<Start>)2026-11-27T08:00:00(<\/Start>\s*<Finish>)2026-12-11T17:00:00/, '$12026-12-04T08:00:00$22026-12-18T17:00:00')
+    .replace(/(<UID>20<\/UID>[\s\S]*?<CalendarUID>-1<\/CalendarUID>)/, '$1\n      <LevelingDelay>24000</LevelingDelay>');
+  await page.goto('/');
+  await page.getByTestId('file-input').first().setInputFiles({ name: 'leveled.xml', mimeType: 'text/xml', buffer: Buffer.from(xml) });
+  await expect(page.getByTestId('import-report')).toContainText('differs from the file');
+  await page.getByRole('button', { name: 'Review in Project data' }).click();
+  const details = page.getByTestId('schedule-check-details');
+  await expect(details).toContainText('Training materials');
+  await expect(details).toContainText('4 Dec 2026 → 18 Dec 2026');
+  await expect(details).toContainText('27 Nov 2026 → 11 Dec 2026');
+  await expect(details).toContainText('−5d');
+  await expect(details).toContainText('resource-leveling delay of 5 d');
+  await expect(details).toContainText('Follows “System configuration” (FS)');
+});
+
 test('imports a real .mpp file through MPXJ', async ({ page, request }) => {
   const status = await (await request.get('/api/status')).json();
   test.skip(!status.mpp || !existsSync(MPP), 'MPXJ runtime or fixture missing (run npm run setup && npm run fixtures)');
