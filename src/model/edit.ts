@@ -14,6 +14,8 @@ export interface TaskPatch {
   milestone?: boolean;
   predecessors?: Link[];
   constraint?: Task['constraint'];
+  /** Change the progress state; `start`/`finish` are the task's current calculated dates. */
+  status?: { value: TaskStatus; start: Instant; finish: Instant };
 }
 
 export type EditResult = { ok: true; project: Project } | { ok: false; error: string };
@@ -75,6 +77,9 @@ export function applyTaskEdit(project: Project, uid: number, patch: TaskPatch): 
   if (patch.start !== undefined) {
     if (!Number.isFinite(patch.start)) return { ok: false, error: 'Invalid start date.' };
     if (t.summary) return { ok: false, error: 'Summary task dates come from their subtasks.' };
+    if (t.actualStart !== undefined || t.percentComplete > 0) {
+      return { ok: false, error: `“${t.name}” has already started, so its start is its actual start date. To plan it from a new date, change its Status to “Not started” first.` };
+    }
     if (t.manual) {
       const shift = patch.start - t.start;
       t.start = patch.start;
@@ -104,6 +109,24 @@ export function applyTaskEdit(project: Project, uid: number, patch: TaskPatch): 
     if (patch.milestone && !t.summary) t.duration = 0;
   }
   if (patch.constraint !== undefined) t.constraint = patch.constraint;
+  if (patch.status !== undefined) {
+    if (t.summary) return { ok: false, error: 'Summary task progress comes from its subtasks.' };
+    const { value, start, finish } = patch.status;
+    if (value === 'Not started') {
+      t.percentComplete = 0;
+      t.actualStart = undefined;
+      t.actualFinish = undefined;
+      if (!t.manual && (t.constraint.type === 'ASAP' || t.constraint.type === 'SNET')) t.constraint = { type: 'SNET', date: start };
+    } else if (value === 'In progress') {
+      t.actualStart = t.actualStart ?? start;
+      t.actualFinish = undefined;
+      if (t.percentComplete >= 100) t.percentComplete = 50;
+    } else {
+      t.percentComplete = 100;
+      t.actualStart = t.actualStart ?? start;
+      t.actualFinish = t.actualFinish ?? finish;
+    }
+  }
   if (patch.predecessors !== undefined) {
     if (t.summary && patch.predecessors.length && project.tasks.some((x) => x.parentUid === uid && patch.predecessors!.some((l) => l.predUid === x.uid))) {
       return { ok: false, error: 'A summary task cannot depend on one of its own subtasks.' };

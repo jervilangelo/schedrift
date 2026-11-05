@@ -50,7 +50,12 @@ export interface ImpactReport {
 /** Auto-detect the Go-Live task: a "go-live" milestone, else the last milestone, else the last task. */
 export function detectGoLive(project: Project, result: ScheduleResult): number | undefined {
   const leaves = project.tasks.filter((t) => t.active && !t.summary);
-  const named = leaves.filter((t) => t.milestone && /go[\s-]?live/i.test(t.name));
+  // A task named "Go-Live" (milestone or not). With several (one per phase), the next upcoming one.
+  const named = leaves.filter((t) => /go[\s-]?live/i.test(t.name));
+  const upcoming = named.filter((t) => !result.byUid.get(t.uid)?.complete);
+  if (upcoming.length) {
+    return upcoming.reduce((a, b) => (result.byUid.get(b.uid)!.ef < result.byUid.get(a.uid)!.ef ? b : a)).uid;
+  }
   const pool = named.length ? named : leaves.filter((t) => t.milestone);
   const candidates = pool.length ? pool : leaves;
   let best: Task | undefined;

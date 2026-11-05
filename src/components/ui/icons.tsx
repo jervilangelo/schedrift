@@ -24,6 +24,7 @@ export const Alert = (p: P) => <Icon {...p}><path d="M8 2.5 14 13H2zM8 6.5v3M8 1
 export const Info = (p: P) => <Icon {...p}><circle cx="8" cy="8" r="5.75" /><path d="M8 7.5v3.5M8 5.25v.01" /></Icon>;
 export const Sidebar = (p: P) => <Icon {...p}><rect x="2.5" y="3" width="11" height="10" rx="1" /><path d="M6.5 3v10" /></Icon>;
 export const Folder = (p: P) => <Icon {...p}><path d="M2.5 4.5v8h11v-6.5H8L6.5 4.5z" /></Icon>;
+export const Table = (p: P) => <Icon {...p}><rect x="2.5" y="3" width="11" height="10" rx="1" /><path d="M2.5 6.5h11M2.5 9.75h11M6.5 6.5V13" /></Icon>;
 export const Check = (p: P) => <Icon {...p}><path d="M3.5 8.5 6.5 11.5 12.5 4.5" /></Icon>;
 
 /** Schedrift mark: three offset bars, the last one drifting late. */

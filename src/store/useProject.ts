@@ -7,6 +7,9 @@ import { importMspdi, ImportError } from '../importer';
 import * as api from '../storage/api';
 import { downloadFile, parseSavedFile, toSavedFile } from '../storage/projectFile';
 import type { GanttMode } from '../lib/rows';
+import { applyMaster, parseMaster, type MasterUpdate } from '../importer/master';
+import { readSpreadsheet } from '../importer/sheet';
+import { todayInstant } from '../scheduling/time';
 
 export type View = 'timeline' | 'simulation' | 'data';
 export type Zoom = 'week' | 'month' | 'quarter' | 'fit';
@@ -44,6 +47,8 @@ interface State {
   busy: string | null;
   notice: Notice | null;
   server: api.ServerStatus | null;
+  /** Pending "Update from Excel master" result, shown for review before it is applied. */
+  masterPreview: MasterUpdate | null;
 
   // actions
   init(): Promise<void>;
@@ -76,6 +81,9 @@ interface State {
   setPresenting(v: boolean): void;
   setReportOpen(v: boolean): void;
   setNotice(n: Notice | null): void;
+  loadMaster(file: File): Promise<void>;
+  applyMasterPreview(): void;
+  cancelMaster(): void;
 }
 
 const emptyScenario = (): Scenario => ({ items: [] });
@@ -115,6 +123,40 @@ export const useProject = create<State>((set, get) => ({
   busy: null,
   notice: null,
   server: null,
+  masterPreview: null,
+
+  async loadMaster(file) {
+    const { project } = get();
+    if (!project) return;
+    set({ busy: `Reading ${file.name}…`, notice: null });
+    try {
+      const sheets = readSpreadsheet(file.name, new Uint8Array(await file.arrayBuffer()));
+      const table = parseMaster(sheets, file.name);
+      if (!table.rows.length) throw new Error('No task rows were found under the header row.');
+      set({ masterPreview: applyMaster(project, table, Math.floor(todayInstant())) });
+    } catch (e) {
+      set({ notice: { kind: 'error', text: `Could not read ${file.name}: ${(e as Error).message}` } });
+    } finally {
+      set({ busy: null });
+    }
+  },
+
+  applyMasterPreview() {
+    const { masterPreview, applied } = get();
+    if (!masterPreview) return;
+    const project = masterPreview.project;
+    set({
+      project,
+      ...compute(project, applied),
+      masterPreview: null,
+      dirty: true,
+      notice: { kind: 'success', text: `Updated ${masterPreview.matched.length} tasks from ${masterPreview.table.fileName}. Dependencies are unchanged.` },
+    });
+  },
+
+  cancelMaster() {
+    set({ masterPreview: null });
+  },
 
   async init() {
     set({ server: await api.getStatus() });

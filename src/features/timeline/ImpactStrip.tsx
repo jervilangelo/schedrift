@@ -21,6 +21,8 @@ export function ImpactStrip({ compact = false }: { compact?: boolean }) {
   const leafCount = project.tasks.filter((t) => !t.summary).length;
   const done = project.tasks.filter((t) => !t.summary && (t.percentComplete >= 100 || t.actualFinish !== undefined)).length;
   const milestones = project.tasks.filter((t) => !t.summary && t.milestone).map((t) => ({ uid: t.uid, name: t.name }));
+  // Any task can be Go-Live (MS Project files often hold it as a 1-day task, not a milestone).
+  const others = project.tasks.filter((t) => !t.summary && !t.milestone).map((t) => ({ uid: t.uid, name: `${t.id}. ${t.name}` }));
   const variance = impact?.goLive?.variance ?? 0;
   const late = simulated && variance > 0;
   const constrained = impact?.goLive?.constrainedLogicDate !== undefined;
@@ -28,15 +30,21 @@ export function ImpactStrip({ compact = false }: { compact?: boolean }) {
   return (
     <div className={cx('flex items-stretch gap-0 border-b border-line bg-surface', compact ? 'px-3' : 'px-4')} data-testid="impact-strip">
       <Metric label="Go-Live" wide>
-        {milestones.length > 0 ? (
+        {milestones.length + others.length > 0 ? (
           <select
             aria-label="Go-Live milestone"
             value={project.goLiveUid ?? ''}
             onChange={(e) => setGoLive(Number(e.target.value))}
             className="max-w-[220px] cursor-pointer truncate rounded-[4px] bg-transparent py-0.5 pr-1 text-[14px] font-medium hover:bg-raised"
           >
-            {goLive && !milestones.some((m) => m.uid === goLive.uid) && <option value={goLive.uid}>{goLive.name}</option>}
-            {milestones.map((m) => <option key={m.uid} value={m.uid}>{m.name}</option>)}
+            {milestones.length > 0 && (
+              <optgroup label="Milestones">
+                {milestones.map((m) => <option key={m.uid} value={m.uid}>{m.name}</option>)}
+              </optgroup>
+            )}
+            <optgroup label="Other tasks">
+              {others.map((m) => <option key={m.uid} value={m.uid}>{m.name}</option>)}
+            </optgroup>
           </select>
         ) : (
           <span className="text-[14px] font-medium">{goLive?.name ?? 'Project finish'}</span>

@@ -131,7 +131,20 @@ export function DataView() {
                   </td>
                   <td className="px-2 py-1 text-ink-2">{single ? single.type : t.predecessors.length > 1 ? 'Mixed' : '—'}</td>
                   <td className="num px-2 py-1 text-right text-ink-2">{single ? lagLabel(single) : t.predecessors.length > 1 ? '…' : '—'}</td>
-                  <td className="px-2 py-1"><StatusPill t={t} /></td>
+                  <td className="px-2 py-1">
+                    {t.summary || !s ? <StatusPill t={t} /> : (
+                      <select
+                        aria-label={`Status of ${t.name}`}
+                        value={statusOf(t)}
+                        onChange={(e) => editTask(t.uid, { status: { value: e.target.value as ReturnType<typeof statusOf>, start: s.es, finish: s.ef } })}
+                        className={cx('h-7 rounded-[4px] border border-transparent bg-transparent px-1 text-[12px] font-medium hover:border-control', statusOf(t) === 'Complete' ? 'text-ok' : 'text-ink-2')}
+                      >
+                        <option>Not started</option>
+                        <option>In progress</option>
+                        <option>Complete</option>
+                      </select>
+                    )}
+                  </td>
                   <td className="px-2 py-1 text-right">
                     {t.summary ? <span className="num text-ink-2">{Math.round(t.percentComplete)}%</span> : (
                       <EditNumber value={t.percentComplete} suffix="%" label={`Percent complete of ${t.name}`} onCommit={(v) => editTask(t.uid, { percentComplete: v })} />

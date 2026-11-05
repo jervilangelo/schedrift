@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFilePicker } from './components/useFilePicker';
 import { useProject, type View } from './store/useProject';
 import { TimelineView, GanttToolbar } from './features/timeline/TimelineView';
@@ -7,10 +7,11 @@ import { SimulationView } from './features/simulation/SimulationView';
 import { DataView } from './features/data/DataView';
 import { StartScreen } from './features/StartScreen';
 import { ImportReportDialog } from './features/ImportReportDialog';
+import { MasterUpdateDialog } from './features/MasterUpdateDialog';
 import { GanttChart } from './features/gantt/GanttChart';
 import { TaskPanel } from './features/simulation/TaskPanel';
 import { Button, cx } from './components/ui/controls';
-import { Download, Folder, Mark, Maximize, Minimize, Save, Upload } from './components/ui/icons';
+import { Download, Folder, Mark, Maximize, Minimize, Save, Table, Upload } from './components/ui/icons';
 
 export default function App() {
   const project = useProject((s) => s.project);
@@ -89,6 +90,7 @@ export default function App() {
         </>
       )}
       <ImportReportDialog />
+      <MasterUpdateDialog />
       <Busy />
       {dragging && (
         <div className="pointer-events-none fixed inset-3 z-50 flex items-center justify-center rounded-[8px] border-2 border-dashed border-ink bg-surface/85">
@@ -123,6 +125,7 @@ function AppBar() {
   const simulated = useProject((s) => s.simulated);
   const setReportOpen = useProject((s) => s.setReportOpen);
   const picker = useFilePicker();
+  const masterInput = useRef<HTMLInputElement>(null);
 
   const present = useCallback(async () => {
     setPresenting(true);
@@ -175,6 +178,25 @@ function AppBar() {
       <div className="ml-auto flex items-center gap-2">
         {picker.input}
         <Button variant="ghost" icon={<Upload />} onClick={picker.open} data-testid="import-button">Import</Button>
+        {project && (
+          <>
+            <input
+              ref={masterInput}
+              type="file"
+              accept=".xlsx,.csv"
+              className="hidden"
+              data-testid="master-input"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void useProject.getState().loadMaster(f);
+                e.target.value = '';
+              }}
+            />
+            <Button variant="ghost" icon={<Table />} onClick={() => masterInput.current?.click()} data-testid="master-button" title="Take dates, durations and status from an Excel master sheet; keep this file's dependencies">
+              Update from Excel
+            </Button>
+          </>
+        )}
         {project && (
           <>
             <Button variant="ghost" icon={<Download />} onClick={exportFile} title="Download a .schedrift.json copy">Export</Button>

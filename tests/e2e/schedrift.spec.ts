@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { atlasMaster, makeXlsx } from '../unit/xlsxFixture';
 
 const MPP = join(process.cwd(), 'tests/fixtures/mpxj/mpp14relations.mpp');
 
@@ -202,6 +203,48 @@ test('explains tasks whose recalculated dates differ from the file', async ({ pa
   await expect(details).toContainText('−5d');
   await expect(details).toContainText('resource-leveling delay of 5 d');
   await expect(details).toContainText('Follows “System configuration” (FS)');
+});
+
+test('updates dates from an Excel master while keeping the dependencies', async ({ page }) => {
+  await openSample(page);
+  await page.getByTestId('master-input').setInputFiles({
+    name: 'master.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from(makeXlsx(atlasMaster())),
+  });
+  await expect(page.getByTestId('master-golive')).toContainText('Go-Live: Thu 4 Mar 2027');
+  await expect(page.getByTestId('master-golive')).toContainText('Same as the Excel master');
+  await expect(page.getByTestId('master-differences')).toContainText('Training materials');
+  await expect(page.getByTestId('master-differences')).toContainText('Waits for “System configuration”');
+  await expect(page.getByTestId('master-excel-only')).toContainText('Core HR');
+  await page.getByTestId('apply-master').click();
+  await expect(page.getByTestId('golive-original')).toHaveText('Thu 4 Mar 2027');
+  await expect(page.getByTestId('notice')).toContainText('Dependencies are unchanged');
+
+  // Simulation runs on top of the updated plan
+  await row(page, 'Cutover rehearsal').click();
+  await delay(page, 'Cutover rehearsal', 'Start delay', 3);
+  await page.getByTestId('run-simulation').click();
+  await expect(page.getByTestId('golive-variance')).toHaveText('+3 days');
+});
+
+test('Go-Live can be any task, and started tasks explain why their start cannot move', async ({ page }) => {
+  await openSample(page);
+  await page.getByLabel('Go-Live milestone').selectOption({ label: '25. Production migration' });
+  await expect(page.getByTestId('golive-original')).toHaveText('Thu 11 Mar 2027');
+
+  await page.getByRole('navigation', { name: 'Views' }).getByRole('button', { name: 'Project data' }).click();
+  await page.getByRole('button', { name: /^Start of System configuration/ }).click();
+  const input = page.getByLabel('Start of System configuration', { exact: true });
+  await input.fill('2026-10-19');
+  await input.press('Enter');
+  await expect(page.getByTestId('notice')).toContainText('has already started');
+
+  await page.getByLabel('Status of System configuration').selectOption('Not started');
+  await page.getByRole('button', { name: /^Start of System configuration/ }).click();
+  await input.fill('2026-10-19');
+  await input.press('Enter');
+  await expect(page.locator('tr[data-uid="11"]')).toContainText('19 Oct 2026');
 });
 
 test('imports a real .mpp file through MPXJ', async ({ page, request }) => {
