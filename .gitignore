@@ -1,13 +1,13 @@
 # dependencies & build
 node_modules/
-dist/
+/dist/
 *.tsbuildinfo
 
 # local runtime (downloaded by `npm run setup`)
-vendor/
+/vendor/
 
 # local project data — never commit real schedules
-data/
+/data/
 *.mpp
 *.mpt
 *.mpx
