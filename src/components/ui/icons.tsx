@@ -27,14 +27,18 @@ export const Folder = (p: P) => <Icon {...p}><path d="M2.5 4.5v8h11v-6.5H8L6.5 4
 export const Table = (p: P) => <Icon {...p}><rect x="2.5" y="3" width="11" height="10" rx="1" /><path d="M2.5 6.5h11M2.5 9.75h11M6.5 6.5V13" /></Icon>;
 export const Check = (p: P) => <Icon {...p}><path d="M3.5 8.5 6.5 11.5 12.5 4.5" /></Icon>;
 
-/** Schedrift mark: three offset bars, the last one drifting late. */
-export function Mark({ size = 22 }: { size?: number }) {
+/**
+ * Schedrift symbol, "Baseline Drift": two phases, each an actual bar on its thin
+ * baseline; the lower one has drifted off its plan. Same geometry as
+ * public/branding/svg/schedrift-logo-symbol.svg (256 grid, footprint 32–224).
+ */
+export function Mark({ size = 24 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="6" fill="#1f2226" />
-      <rect x="6" y="9" width="12" height="4" rx="1" fill="#5fb3a5" />
-      <rect x="11" y="15" width="10" height="4" rx="1" fill="#5fb3a5" />
-      <rect x="17" y="21" width="9" height="4" rx="1" fill="#e2593f" />
+    <svg width={size} height={size} viewBox="32 32 192 192" aria-hidden="true" className="shrink-0">
+      <rect x="32" y="32" width="144" height="48" rx="10" fill="var(--color-ink)" />
+      <rect x="32" y="92" width="144" height="20" rx="6" fill="var(--color-ink)" />
+      <rect x="80" y="144" width="144" height="48" rx="10" fill="var(--color-bar)" />
+      <rect x="32" y="204" width="144" height="20" rx="6" fill="var(--color-ink)" />
     </svg>
   );
 }

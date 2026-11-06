@@ -1,4 +1,9 @@
-# Schedrift
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/branding/svg/schedrift-logo-dark.svg">
+    <img src="public/branding/svg/schedrift-logo-horizontal.svg" alt="Schedrift" width="300">
+  </picture>
+</h1>
 
 **Make your Microsoft Project schedule presentable.**
 
@@ -153,6 +158,12 @@ All test data is synthetic. See [docs/TESTING.md](docs/TESTING.md) for what each
 - Task splits, recurring calendar exceptions (only dated ones are used), alternate work weeks and inserted subprojects are not modelled. Each one present in a file is flagged in the import report.
 - Schedrift cannot write `.mpp` files. Edits and scenarios are kept in Schedrift's own project file.
 - The automatic Java download is set up for Windows x64. Elsewhere, install Java 11+ or set `SCHEDRIFT_JAVA`.
+
+---
+
+## Brand
+
+The Schedrift mark, *Baseline Drift*, shows two phases on their baselines, one of which has drifted off its plan. Logo files, favicons, colours and usage rules are in [public/branding](public/branding/BRAND_GUIDELINES.md).
 
 ---
 

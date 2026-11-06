@@ -146,8 +146,8 @@ function AppBar() {
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-surface px-3">
       <button type="button" className="flex items-center gap-2 rounded-[6px] px-1 py-1 hover:bg-active" onClick={() => (!dirty || confirm('Close this project? Unsaved changes will be lost.')) && closeProject()} title="Schedrift — close project">
-        <Mark />
-        <span className="text-[15px] font-semibold tracking-[-0.01em]">Schedrift</span>
+        <Mark size={20} />
+        <span className={`${project ? 'hidden sm:inline' : ''} text-[15px] font-semibold tracking-[-0.012em]`}>Schedrift</span>
       </button>
       {project && (
         <>

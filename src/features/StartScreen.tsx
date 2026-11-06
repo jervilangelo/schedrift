@@ -19,6 +19,10 @@ export function StartScreen() {
   return (
     <main className="flex flex-1 justify-center overflow-auto px-4 py-12">
       <div className="grid w-full max-w-[980px] grid-cols-1 gap-4 self-start md:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-2 md:col-span-2" data-testid="brand">
+          <img src="/branding/svg/schedrift-logo-horizontal.svg" alt="Schedrift" width={128} height={40} className="h-10 w-auto" />
+          <span className="text-[14px] text-ink-2">Visualize timelines. Understand the impact.</span>
+        </div>
         <section className="rounded-[8px] border border-line bg-surface p-6" aria-labelledby="start-h">
           <h1 id="start-h" className="text-[24px] leading-[30px] font-semibold tracking-[-0.01em]">Open a Microsoft Project schedule</h1>
           <p className="mt-2 max-w-[56ch] text-[14px] leading-[22px] text-ink-2">
