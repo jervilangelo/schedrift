@@ -57,8 +57,8 @@ describe('spreadsheet reading', () => {
 describe('matching', () => {
   it('normalizes outline numbers and punctuation; tolerates small typos', () => {
     expect(normalizeName('4 UAT')).toBe('uat');
-    expect(normalizeName('Cutover Preparation & Go Live')).toBe('cutover preparation and go live');
-    expect(similarity(normalizeName('Business Blueprint Sign-Off'), normalizeName('Business Bluepring Sign-off'))).toBeGreaterThan(0.86);
+    expect(normalizeName('Data Migration & Go Live')).toBe('data migration and go live');
+    expect(similarity(normalizeName('Solution Design Sign-Off'), normalizeName('Soluton Design Sign-off'))).toBeGreaterThan(0.86);
   });
   it('matches repeated names to the right phase by order', () => {
     const p = makeProject([
@@ -94,7 +94,7 @@ describe('applying the master', () => {
     expect(update.differences).toEqual([]);
   });
   it('lists rows only in Excel and similar-name matches', () => {
-    expect(update.excelOnly.map((x) => x.name)).toEqual(['Core HR']);
+    expect(update.excelOnly.map((x) => x.name)).toEqual(['Vendor portal setup']);
     expect(update.matched.find((m) => m.uid === 19)?.how).toBe('similar');
   });
   it('records actual dates for completed rows', () => {

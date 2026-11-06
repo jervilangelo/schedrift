@@ -17,7 +17,7 @@ const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
 
 /**
  * Splits the top-level outline into rollout waves: a new wave starts when a top-level name
- * repeats one already used in the current wave (e.g. a second "Requirements Gathering").
+ * repeats one already used in the current wave (e.g. a second "Discovery").
  */
 export function waves(tops: Task[]): Task[][] {
   const out: Task[][] = [];

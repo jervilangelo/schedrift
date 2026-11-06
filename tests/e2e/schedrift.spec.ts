@@ -205,7 +205,7 @@ test('updates dates from an Excel master while keeping the dependencies', async 
   await expect(page.getByTestId('master-golive')).toContainText('Go-Live: Thu 4 Mar 2027');
   await expect(page.getByTestId('master-golive')).toContainText('Same as the Excel master');
   await expect(page.getByTestId('master-differences')).toHaveCount(0);
-  await expect(page.getByTestId('master-excel-only')).toContainText('Core HR');
+  await expect(page.getByTestId('master-excel-only')).toContainText('Vendor portal setup');
   await page.getByTestId('apply-master').click();
   await expect(page.getByTestId('golive-original')).toHaveText('Thu 4 Mar 2027');
   await expect(page.getByTestId('notice')).toContainText('Dependencies are unchanged');

@@ -4,11 +4,11 @@ import { makeProject } from './helpers';
 
 describe('executive rows', () => {
   const p = makeProject([
-    { uid: 1, name: 'Requirements Gathering', summary: true },
+    { uid: 1, name: 'Discovery', summary: true },
     { uid: 2, name: 'Workshop', parent: 1 },
     { uid: 3, name: 'UAT', summary: true },
-    { uid: 4, name: 'Go Live All', parent: 3, dur: 1 },
-    { uid: 5, name: 'Requirements gathering', summary: true },
+    { uid: 4, name: 'Go-Live (all sites)', parent: 3, dur: 1 },
+    { uid: 5, name: 'discovery', summary: true },
     { uid: 6, name: 'Templates', parent: 5 },
   ]);
   it('starts a new wave when a top-level name repeats', () => {

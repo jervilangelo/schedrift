@@ -45,7 +45,7 @@ export function atlasMaster(): (string | number | null)[][] {
     ['   User acceptance testng (UAT)', 'Phase 1', 'Team B', 'Yet to start', 'Tue Feb-02-2027', 'Mon Feb-22-2027', 15, null, null, 'On track'],
     ['   Training materials', 'Phase 1', 'Team A', 'Yet to start', 'Mon Nov-02-2026', 'Fri Nov-13-2026', 10, null, null, 'On track'],
     ['   UAT sign-off', 'Phase 1', 'Team B', 'Yet to start', 'Mon Feb-22-2027', 'Mon Feb-22-2027', 1, null, null, 'On track'],
-    ['         Core HR', 'Phase 1', 'Team B', 'Yet to start', 'Wed Jan-27-2027', 'Wed Jan-27-2027', 1, null, null, 'On track'],
+    ['         Vendor portal setup', 'Phase 1', 'Team B', 'Yet to start', 'Wed Jan-20-2027', 'Wed Jan-20-2027', 1, null, null, 'On track'],
     ['   Cutover rehearsal', 'Phase 1', 'Team A', 'Yet to start', serial(2027, 2, 23), serial(2027, 3, 1), 5, null, null, 'On track'],
     ['   Production migration', 'Phase 1', 'Team A', 'Yet to start', 'Tue Mar-02-2027', 'Thu Mar-04-2027', 3, null, null, 'On track'],
     ['   Go-Live', 'Phase 1', 'All', 'Yet to start', 'Thu Mar-04-2027', 'Thu Mar-04-2027', 1, null, null, 'On track'],
