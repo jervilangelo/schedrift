@@ -1,173 +1,177 @@
-<h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="public/branding/svg/schedrift-logo-dark.svg">
-    <img src="public/branding/svg/schedrift-logo-horizontal.svg" alt="Schedrift" width="300">
-  </picture>
-</h1>
+<div align="center">
+
+<img src="docs/images/schedrift-readme-hero.svg" alt="Schedrift — complex schedules, clear decisions" width="100%" />
+
+<br />
 
 **Make your Microsoft Project schedule presentable.**
 
-The objective of Schedrift is to take your `.mpp` file and make it **presentable to stakeholders and executives**: a clear visual, not data that looks raw. MS Project is built for the people who plan a project. Its grids and indented task lists rarely work on a slide or in a steering-committee meeting. Schedrift reads the same file and turns it into a clean Gantt chart. You can present it full screen, and it answers the question executives actually ask:
+Convert detailed project plans into clear, interactive Gantt charts built for stakeholder conversations.
 
-> *If this slips, what happens to Go-Live?*
+[Explore the features](#what-schedrift-does) · [Get started](#get-started) · [See the screenshots](#see-it-in-action) · [Understand the architecture](#under-the-hood)
 
-![Executive view in presentation mode](docs/images/present.png)
+<br />
 
-Everything runs on your own computer: no cloud, no account, no telemetry. Your `.mpp` file is read, never modified.
+![License: MIT](https://img.shields.io/badge/license-MIT-1F2226?style=flat-square)
+![TypeScript](https://img.shields.io/badge/TypeScript-React-3E8A7E?style=flat-square)
+![Local first](https://img.shields.io/badge/local--first-no%20cloud-1F2226?style=flat-square)
+![Microsoft Project](https://img.shields.io/badge/import-.mpp%20%7C%20.xml%20%7C%20.mpx-3E8A7E?style=flat-square)
 
-> All screenshots and the bundled sample (`public/samples/atlas-erp-rollout.xml`) use a **synthetic** project, "Atlas ERP Rollout". Its names, dates and progress are fictitious.
-
----
-
-## What it does
-
-| | |
-|---|---|
-| **Shows your dates as they are** | Every task keeps the Start and Finish from your file. Schedrift does not reschedule your plan, so what you present is what you approved in MS Project. |
-| **Executive view** | One row per phase, with its key dates and Go-Live. Phases are solid bars with their dates and % complete. The whole plan fits on one screen. If your schedule repeats its phases for a second rollout, they are grouped into **Phase 1**, **Phase 2**, and so on. |
-| **Detailed view** | The full outline with dependencies, float and the critical path. Use it when you need to explain *why*. |
-| **Delay simulation** | Select a task and drag a slider. The chart, the Go-Live date and the variance update live. |
-| **Present mode** | Full screen, larger type, the toolbar trimmed to what an audience needs. |
-| **Excel master** | Take dates and status from your planning spreadsheet while keeping the `.mpp`'s dependencies. |
+</div>
 
 ---
 
-## The views
+## Why Schedrift?
 
-### Executive
+Microsoft Project is excellent for planning. Explaining that plan in a meeting is a different problem. Dense task grids, dependency chains and long timelines can make it hard for a stakeholder to answer a simple question:
 
-![Executive view](docs/images/executive.png)
+> **If this task slips, what happens to Go-Live?**
 
-- **Phases** are drawn as solid bars. The darker part is the work already done, and the % complete appears in the list.
-- **Key dates** (milestones, and any task named "Go-Live") are diamonds. The Go-Live you selected is drawn larger and bold.
-- **Today** and **Go-Live** are marked in the date header. A dashed line runs down the chart at Go-Live.
-- **Rollout waves**: when the same phase name appears again at the top level of the outline (for example, a second "Discovery"), a new wave starts. Each wave gets a labelled band with its date range.
-- The view zooms to **Fit** and sizes its rows so the whole plan is visible without scrolling. Switching back to **Detailed** restores your previous zoom.
+**Schedrift bridges the gap between project planning and project communication.** Bring in a schedule, see the whole project in one presentation-ready view, and explore the downstream impact of potential delays without changing your original Microsoft Project file.
 
-### Detailed and simulation
+## See it in action
 
-![Detailed view with a delay simulation](docs/images/simulation.png)
+### 01 · The big picture — Executive view
 
-Click any task to open the side panel:
+<img src="docs/images/present.png" alt="Schedrift fullscreen executive presentation showing an overview of project phases and milestones" width="100%" />
 
-- **Simulate** tab. Each task in the scenario has two sliders, **Start** and **Duration**, in working days, each with a number box for exact values. The green tick on a slider marks the task's float: delays up to that point do not move anything else. Ctrl+click adds more tasks to the scenario.
-- **Details** tab. Planned and simulated dates side by side, duration, float, and clickable predecessors and successors.
+A focused, fullscreen overview of project phases, progress, key milestones and Go-Live. The **Fit** option keeps the plan visible without scrolling; rollout waves are grouped so the story stays easy to follow.
 
-The strip at the top always shows where Go-Live lands: the planned date, the simulated date, and a variance badge such as **+6 days**. Next to it are the critical-task count and the overall % complete. A plain-language sentence explains the result, for example *"Go-Live moves 6 days later, driven by User acceptance testing → UAT sign-off → …"*. The **Simulation** page lists every task that moved, along with the chain of tasks that carries the delay to Go-Live.
+### 02 · The details — Gantt and dependencies
 
----
+<img src="docs/images/executive.png" alt="Schedrift executive Gantt chart with phases and milestones" width="100%" />
 
-## How dates and delays work
+Move between **Executive** and **Detailed** views. The detailed chart reveals task relationships, float, predecessors and successors; **Critical path** focus helps isolate what matters to the completion date.
 
-Schedrift keeps the rules simple so that what you present matches your file.
+### 03 · The question — What if a task slips?
 
-1. **The file's dates are the plan.** Each task is drawn at the Start and Finish stored in the `.mpp`. Constraints, manual or auto scheduling, and leveling delays do not move anything; MS Project already accounted for them when it saved the file.
-2. **Predecessors are kept exactly as in the file.** They are drawn as arrows and used by the simulation. They never move a task by themselves.
-3. **A delay pushes a successor only once it uses up the gap.** If a successor starts 5 working days after its predecessor finishes, a 3-day slip moves nothing, and a 7-day slip moves the successor 2 days.
-4. **Dates that already overlap a link stay as they are.** If your file has a task starting before its predecessor finishes, Schedrift keeps that overlap and only passes on *additional* slippage. Such links are listed in the import report, so you know they are there.
-5. **Progress is respected.** Completed tasks cannot be delayed. Tasks already in progress keep their start; you can only extend their duration.
-6. **Edits move only the task you edit.** Changing a task's start, finish or duration in **Project data** does not reschedule anything else.
+<img src="docs/images/simulation.png" alt="Schedrift delay simulation with timeline overlays and Go-Live impact" width="100%" />
 
-Working days follow the project calendar in the file, including its holidays.
+Select one or more tasks, change their start or duration in working days, and watch the timeline and Go-Live variance update. See which dependent tasks move and the chain driving the change.
 
----
+> Screenshots and the bundled **Atlas ERP Rollout** sample are synthetic. They contain no real customer or company schedules.
 
-## Getting started (Windows)
+## What Schedrift does
 
-1. Install **Node.js 20 or newer** from <https://nodejs.org> (one time only).
-2. Double-click **`Schedrift.cmd`**.
+| Capability | What you get |
+| :-- | :-- |
+| **Import Microsoft Project** | Load `.mpp`, `.mpx` and Microsoft Project XML (`.xml`) files. |
+| **Executive & Detailed Gantt** | One-screen phase overview or a deeper look at task relationships. |
+| **Critical-path analysis** | Highlight critical tasks and inspect total float. |
+| **Delay simulation** | Model start and duration changes, including downstream Go-Live impact. |
+| **Baseline comparison** | Compare the original schedule with scenarios and baseline outlines. |
+| **Present mode** | Fullscreen view with readable typography and fewer distractions. |
+| **Excel master updates** | Apply reviewed dates and status from `.xlsx` or `.csv` while keeping the imported dependencies. |
+| **Save & export** | Reopen saved projects or export portable `.schedrift.json` project files. |
 
-The first start installs the dependencies. It also downloads two pinned, checksum-verified runtimes into `vendor/` (about 80 MB, no admin rights needed):
+## Get started
 
-- **MPXJ 16.10.0**, the open-source library that reads `.mpp` files;
-- a portable **Eclipse Temurin 21 JRE**, only if Java 11+ is not already installed.
+### Windows — simplest option
 
-Your browser then opens at <http://localhost:5178>. Keep the console window open while you work, and close it to stop Schedrift. Set `SCHEDRIFT_PORT` to use a different port.
+1. Install **[Node.js 20+](https://nodejs.org/)**.
+2. Clone or download this repository.
+3. Double-click **`Schedrift.cmd`**.
 
-### Manual start / development
+The first launch installs Node dependencies and downloads pinned, checksum-verified runtimes into `vendor/` (approximately 80 MB): **MPXJ 16.10.0** for `.mpp` parsing and a portable **Eclipse Temurin 21** JRE if Java 11+ is not present. No administrator access is required for the bundled setup.
+
+Schedrift opens in your browser at **http://localhost:5178**. Keep the console window open while working; close it to stop the application.
+
+### Developers
 
 ```bash
 npm ci
-npm run setup                  # MPXJ + Java runtime for .mpp import
-npm run build && npm start     # production server on http://localhost:5178
-npm run dev                    # Vite dev server with the same local API
+npm run setup
+npm run build && npm start
+# or: npm run dev
 ```
 
----
+The server binds to `127.0.0.1`. Use `SCHEDRIFT_PORT` if you need another port.
 
-## Using Schedrift
+### Your first schedule
 
-| You want to… | Do this |
-|---|---|
-| Import a schedule | **Import**, drag a file onto the window, or use the start screen. Accepts `.mpp`, `.mpx`, MS Project XML (`.xml`) and saved `.schedrift.json` files. |
-| Prepare a stakeholder view | Choose **Executive**, check the **Go-Live** selector in the top strip, then click **Present**. |
-| Pick the Go-Live | Use the **Go-Live** selector. Any task can be chosen. On import, Schedrift picks the next upcoming task named "Go-Live". |
-| Simulate a delay | Click a task and drag **Start** or **Duration** in the side panel. Ctrl+click to add more tasks. **Reset** clears the scenario. |
-| See the full impact | **See full impact** (or the **Simulation** tab) lists every moved task, float before → after, critical-path changes and the driving chain. |
-| Compare with the baseline | **Compare → Baseline** draws the MS Project baseline as dashed outlines. **Original** shows the plan before your simulation. |
-| Focus on the critical path | Turn on **Critical path** to fade everything else. |
-| Edit the plan | **Project data**: edit names, dates, durations, % complete, milestones and predecessors (`12`, `12FS+2d`, `7SS-1d`, `9FF`). A change that would create a circular dependency is rejected. |
-| Use an Excel master for dates | After importing the `.mpp`, click **Update from Excel** and choose an `.xlsx` or `.csv`. The sheet's dates and status are used as given, and the `.mpp`'s dependencies are kept. You review the matches before anything is applied. |
-| Save and reopen | **Save** (Ctrl+S) stores the project and its scenario in `data/projects/`, and saved projects appear on the start screen. **Export** downloads a portable `.schedrift.json`. |
+1. **Import** an `.mpp`, `.mpx`, `.xml` or previously exported `.schedrift.json` file.
+2. Choose **Executive** and **Fit** for a stakeholder-ready overview.
+3. Select the milestone that represents **Go-Live**.
+4. Select a task in **Detailed** view and try **Simulate** to explore potential delays.
+5. Use **Present** to go fullscreen, or **Save / Export** to keep your scenario.
 
----
+No project file handy? Explore the bundled synthetic sample at `public/samples/atlas-erp-rollout.xml`.
 
-## Your data stays yours
+## Built to explain schedule changes, not rewrite your plan
 
-- Files are processed on `127.0.0.1` only. The local server rejects non-local `Host` and `Origin` headers.
-- `.mpp` files are converted from a temporary copy; the original is never written to.
-- `data/`, `*.mpp`, `*.mpx`, `*.mpt` and `*.schedrift.json` are git-ignored, so real schedules are never committed.
-- The repository contains synthetic data only: the Atlas sample and generated test fixtures.
-- After your first project opens, a one-time card says thank you and links to this repository. Dismissing it stores a single flag in your browser's local storage. Nothing is sent anywhere, and there is no analytics or telemetry.
+Schedrift deliberately preserves the **Start** and **Finish** dates stored in your project file. It does *not* attempt to reproduce Microsoft Project's scheduling and resource-leveling engine.
 
----
+- Dependencies are imported as defined in the file (FS, SS, FF and SF, including supported lags).
+- A simulated delay reaches successors only when it exceeds the gap already available between tasks.
+- Completed tasks cannot be delayed; in-progress tasks keep their start.
+- Scenarios are separate from the original approved schedule.
+- The import report flags cycles, missing predecessors, invalid dates and unsupported features.
 
-## Architecture
+For more on assumptions, design decisions and edge cases, see the [master blueprint](docs/SCHEDRIFT_MASTER_BLUEPRINT.md).
 
+## Your schedule stays on your computer
+
+**No cloud. No login. No telemetry.**
+
+The application uses a local Node server bound to `127.0.0.1`. Original `.mpp` files are read from temporary copies and never modified. Real project files and saved `.schedrift.json` data are excluded from Git via `.gitignore`.
+
+A one-time thank-you card after a project opens links to this GitHub repository. Dismissing it stores only a local browser flag; it does not send data anywhere.
+
+## Under the hood
+
+```text
+React UI (src/features)
+    │
+    ├── zustand (src/store) ──► TypeScript scheduling engine
+    │                            ├── dependency propagation
+    │                            ├── total float / critical path
+    │                            └── scenario impact
+    │
+    ├── custom SVG Gantt renderer + row virtualization
+    │
+    └── local Node HTTP API (127.0.0.1)
+           ├── Java + MPXJ ──► MSPDI XML ──► TypeScript importer
+           └── local saved projects
 ```
-React UI (src/features) ──► zustand store (src/store) ──► scheduling engine (src/scheduling, pure TypeScript)
-        │                                         └────► importer (src/importer: MSPDI XML → model)
-        └── fetch /api ──► local Node server (server/) ──► Java + MPXJ: .mpp → MSPDI XML (temp copy)
-                                              └────────► data/projects/*.schedrift.json
-```
 
-- **Engine** (`src/scheduling/engine.ts`). It keeps each task's file dates and propagates a simulated delay along FS/SS/FF/SF links, with lags in working or elapsed days. A delay pushes a task only past the gap it already has. The engine also computes total float and the critical path against the file's dates. It has no UI dependencies and is unit-tested.
-- **Import** (`src/importer`). MPXJ converts `.mpp` into MSPDI (Microsoft's documented XML schema), which a TypeScript importer normalizes. Every import gets a report: cycles, missing predecessors, invalid dates, unsupported features, and links your file's dates already break.
-- **Gantt** (`src/features/gantt`). A custom SVG renderer with row virtualization, executive and detailed layouts, and baseline and simulation overlays.
-- **Server** (`server/`). Plain `node:http`, bound to `127.0.0.1`.
+**Key engineering areas:** React, TypeScript, state management, SVG chart rendering, graph and scheduling logic, Microsoft Project interoperability, local-first architecture and automated tests.
 
-The original design notes are in [docs/SCHEDRIFT_MASTER_BLUEPRINT.md](docs/SCHEDRIFT_MASTER_BLUEPRINT.md).
-
----
-
-## Tests
+### Testing
 
 ```bash
-npm test               # unit + integration (Vitest): engine, calendars, importer, executive rows
-npm run fixtures       # downloads MPXJ's public synthetic .mpp test files (not committed)
-npm run test:e2e       # Playwright end-to-end in the browser
+npm test          # Vitest unit and integration tests
+npm run fixtures  # public synthetic .mpp fixtures
+npm run test:e2e   # Playwright browser tests
 ```
 
-All test data is synthetic. See [docs/TESTING.md](docs/TESTING.md) for what each test covers.
+The test datasets are synthetic. See [TESTING.md](docs/TESTING.md) for coverage.
+
+## Important limitations
+
+- **Not an MS Project replacement:** dates are displayed as stored; changes made in **Project data** do not automatically reschedule other tasks.
+- **Simulation granularity:** whole working days; hours within a day are treated linearly.
+- **Unsupported constructs:** split tasks, recurring calendar exceptions, alternate work weeks and inserted subprojects are not fully modeled. The import report flags them.
+- **No `.mpp` writing:** save scenarios in Schedrift's project format instead.
+- **Runtime setup:** automatic Java download targets Windows x64; on other systems, install Java 11+ or set `SCHEDRIFT_JAVA`.
+
+## About the project
+
+Schedrift grew from a practical presentation challenge: **project schedules contain the right information, but not always in the form people need to make decisions.** It focuses on the clarity of the conversation — making project progress and the impact of changes easier to communicate.
+
+**Designed & developed by [Jervil Angelo De Leon](https://github.com/jervilangelo).** If this tool helps you, consider [starring the repository](https://github.com/jervilangelo/schedrift) to support the open-source project.
+
+The visual identity uses the **Baseline Drift** mark: two schedule bars, with one drifting from its original baseline. See the [brand guidelines](public/branding/BRAND_GUIDELINES.md).
+
+## License & third-party components
+
+Schedrift is released under the [MIT License](LICENSE). It uses MPXJ (LGPL-2.1), Eclipse Temurin (GPLv2 with Classpath Exception) and IBM Plex Sans (SIL Open Font License). See [third-party notices](THIRD_PARTY_NOTICES.md).
 
 ---
 
-## Known limitations
+<div align="center">
 
-- Dates are drawn as stored in the file. Schedrift does not re-run MS Project's scheduling (resource leveling, effort-driven durations and so on), so to change the plan itself, edit it in MS Project and re-import.
-- Simulation works in **whole working days**. Hours inside a day are mapped linearly.
-- Task splits, recurring calendar exceptions (only dated ones are used), alternate work weeks and inserted subprojects are not modelled. Each one present in a file is flagged in the import report.
-- Schedrift cannot write `.mpp` files. Edits and scenarios are kept in Schedrift's own project file.
-- The automatic Java download is set up for Windows x64. Elsewhere, install Java 11+ or set `SCHEDRIFT_JAVA`.
+**Complex schedules. Clear decisions.**
 
----
+[⭐ Star Schedrift](https://github.com/jervilangelo/schedrift) · [Read the blueprint](docs/SCHEDRIFT_MASTER_BLUEPRINT.md)
 
-## Brand
-
-The Schedrift mark, *Baseline Drift*, shows two phases on their baselines, one of which has drifted off its plan. Logo files, favicons, colours and usage rules are in [public/branding](public/branding/BRAND_GUIDELINES.md).
-
----
-
-## Licences
-
-Schedrift is MIT-licensed (see [LICENSE](LICENSE)). It downloads MPXJ (LGPL-2.1) and Eclipse Temurin (GPLv2 with Classpath Exception) unmodified at setup time, runs them as a separate process, and keeps them out of this repository. IBM Plex Sans is bundled under the SIL Open Font License. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+</div>
