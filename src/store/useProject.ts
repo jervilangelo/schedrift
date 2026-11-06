@@ -35,6 +35,9 @@ interface State {
   view: View;
   zoom: Zoom;
   mode: GanttMode;
+  /** The one-time open-source welcome card is waiting to be shown. */
+  welcomePending: boolean;
+  dismissWelcome(): void;
   zoomBeforeExecutive?: Zoom;
   collapsed: number[];
   criticalOnly: boolean;
@@ -89,6 +92,26 @@ interface State {
 
 const emptyScenario = (): Scenario => ({ items: [] });
 
+/** Remembered per browser profile; storage can be unavailable (private mode), so never throw. */
+export const WELCOME_KEY = 'schedrift.welcome-seen.v1';
+let welcomeDismissed = false; // also honoured when storage is unavailable
+function welcomeSeen(): boolean {
+  if (welcomeDismissed) return true;
+  try {
+    return localStorage.getItem(WELCOME_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function rememberWelcome(): void {
+  welcomeDismissed = true;
+  try {
+    localStorage.setItem(WELCOME_KEY, '1');
+  } catch {
+    /* not persisted: the card may show again in a later session */
+  }
+}
+
 function compute(project: Project, applied: Scenario | null) {
   const original = schedule(project);
   if (!applied || !applied.items.length) return { original, simulated: null, impact: null };
@@ -121,6 +144,7 @@ export const useProject = create<State>((set, get) => ({
   view: 'timeline',
   zoom: 'month',
   mode: 'detailed',
+  welcomePending: false,
   collapsed: [],
   criticalOnly: false,
   compare: 'original',
@@ -242,7 +266,13 @@ export const useProject = create<State>((set, get) => ({
       dirty: false,
       reportOpen: false,
       notice: null,
+      welcomePending: get().welcomePending || !welcomeSeen(),
     });
+  },
+
+  dismissWelcome() {
+    rememberWelcome();
+    set({ welcomePending: false });
   },
 
   closeProject() {

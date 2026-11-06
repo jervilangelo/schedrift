@@ -5,6 +5,11 @@ import { atlasMaster, makeXlsx } from '../unit/xlsxFixture';
 
 const MPP = join(process.cwd(), 'tests/fixtures/mpxj/mpp14relations.mpp');
 
+// The one-time welcome card has its own tests (welcome.spec.ts); keep it out of these flows.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('schedrift.welcome-seen.v1', '1'));
+});
+
 async function openSample(page: Page) {
   await page.goto('/');
   await page.getByTestId('open-sample').click();

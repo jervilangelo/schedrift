@@ -84,7 +84,7 @@ body {
     transform 140ms ease-out;
 }
 .panel-in {
-  animation: panel-in 160ms ease-out;
+  animation: panel-in 200ms var(--ease-out);
 }
 @keyframes panel-in {
   from {
@@ -95,6 +95,97 @@ body {
     transform: none;
     opacity: 1;
   }
+}
+
+/*
+ * Motion. Short, opacity + transform only; the Gantt itself is never animated wholesale.
+ * Easing: decelerate in, accelerate out.
+ */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Dialogs (import report, Excel review, welcome card) */
+dialog[open] {
+  animation: dialog-in 220ms var(--ease-out);
+}
+dialog[open]::backdrop {
+  background: rgb(31 34 38 / 0.32);
+  animation: backdrop-in 220ms var(--ease-out);
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Welcome card: a little softer on the way in, quick on the way out. */
+.welcome-card {
+  box-shadow: 0 1px 2px rgb(31 34 38 / 0.06), 0 16px 40px rgb(31 34 38 / 0.14);
+}
+.welcome-card[open] {
+  animation: welcome-in 280ms var(--ease-out);
+}
+.welcome-card[data-leaving] {
+  animation: welcome-out 180ms var(--ease-in) forwards;
+}
+.welcome-card[data-leaving]::backdrop {
+  animation: backdrop-out 180ms var(--ease-in) forwards;
+}
+@keyframes welcome-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes welcome-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(4px) scale(0.985); }
+}
+@keyframes backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.welcome-btn {
+  transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.welcome-btn:active {
+  transform: translateY(1px);
+}
+
+/* Floating toast and the busy indicator */
+.toast-in {
+  animation: toast-in 200ms var(--ease-out);
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.busy-in {
+  animation: busy-in 180ms var(--ease-out);
+}
+@keyframes busy-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+/* The symbol "breathes" while working; its vector paths are untouched. */
+.mark-busy {
+  animation: mark-busy 1.4s ease-in-out infinite;
+}
+@keyframes mark-busy {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* Switching views or panel tabs: a quick fade, no movement of the chart. */
+.view-in {
+  animation: view-in 160ms var(--ease-out);
+}
+@keyframes view-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

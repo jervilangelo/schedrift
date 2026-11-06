@@ -8,10 +8,11 @@ import { DataView } from './features/data/DataView';
 import { StartScreen } from './features/StartScreen';
 import { ImportReportDialog } from './features/ImportReportDialog';
 import { MasterUpdateDialog } from './features/MasterUpdateDialog';
+import { REPO_URL, WelcomeCard } from './features/WelcomeCard';
 import { GanttChart } from './features/gantt/GanttChart';
 import { TaskPanel } from './features/simulation/TaskPanel';
 import { Button, cx } from './components/ui/controls';
-import { Download, Folder, Mark, Maximize, Minimize, Save, Table, Upload } from './components/ui/icons';
+import { Download, Folder, GitHub, Mark, Maximize, Minimize, Save, Table, Upload } from './components/ui/icons';
 
 export default function App() {
   const project = useProject((s) => s.project);
@@ -91,6 +92,7 @@ export default function App() {
       )}
       <ImportReportDialog />
       <MasterUpdateDialog />
+      <WelcomeCard />
       <Busy />
       {dragging && (
         <div className="pointer-events-none fixed inset-3 z-50 flex items-center justify-center rounded-[8px] border-2 border-dashed border-ink bg-surface/85">
@@ -104,7 +106,7 @@ export default function App() {
 function Workspace() {
   const view = useProject((s) => s.view);
   return (
-    <main className="flex min-h-0 flex-1 flex-col" aria-label={view}>
+    <main key={view} className="view-in flex min-h-0 flex-1 flex-col" aria-label={view}>
       {view === 'timeline' && <TimelineView />}
       {view === 'simulation' && <SimulationView />}
       {view === 'data' && <DataView />}
@@ -145,7 +147,7 @@ function AppBar() {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-surface px-3">
-      <button type="button" className="flex items-center gap-2 rounded-[6px] px-1 py-1 hover:bg-active" onClick={() => (!dirty || confirm('Close this project? Unsaved changes will be lost.')) && closeProject()} title="Schedrift — close project">
+      <button type="button" className="flex h-8 shrink-0 items-center gap-2 rounded-[6px] px-1.5 transition-colors hover:bg-active" onClick={() => (!dirty || confirm('Close this project? Unsaved changes will be lost.')) && closeProject()} title="Schedrift — close project">
         <Mark size={20} />
         <span className={`${project ? 'hidden sm:inline' : ''} text-[15px] font-semibold tracking-[-0.012em]`}>Schedrift</span>
       </button>
@@ -205,7 +207,18 @@ function AppBar() {
             <Button variant="primary" icon={<Maximize />} onClick={() => void present()} data-testid="present-button">Present</Button>
           </>
         )}
-        {!project && <span className="hidden text-[12px] text-ink-3 md:inline"><Folder size={14} className="mr-1 inline" />Local only — nothing leaves this computer</span>}
+        {!project && <span className="mr-2 hidden items-center gap-1 text-[12px] text-ink-3 md:inline-flex"><Folder size={14} />Local only — nothing leaves this computer</span>}
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-ink-3 transition-colors hover:bg-active hover:text-ink"
+          title="Schedrift on GitHub — free and open source"
+          aria-label="Schedrift on GitHub"
+          data-testid="github-link"
+        >
+          <GitHub size={16} />
+        </a>
       </div>
     </header>
   );
@@ -222,8 +235,8 @@ function PresentationLayout() {
   return (
     <div className="flex h-full flex-col" data-testid="presentation">
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-surface px-4">
-        <Mark size={20} />
-        <h1 className="truncate text-[17px] font-semibold">{project.name}</h1>
+        <span className="flex opacity-80"><Mark size={18} /></span>
+        <h1 className="truncate text-[17px] font-semibold tracking-[-0.01em]">{project.name}</h1>
         <Button className="ml-auto" icon={<Minimize />} onClick={() => void exit()} data-testid="exit-present">Exit presentation</Button>
       </header>
       <ImpactStrip compact />
@@ -250,7 +263,7 @@ function Notice() {
     <div
       role={notice.kind === 'error' ? 'alert' : 'status'}
       className={cx(
-        'fixed bottom-5 left-1/2 z-50 flex w-max max-w-[min(640px,calc(100vw-32px))] -translate-x-1/2 items-center gap-4 rounded-[8px] border px-4 py-2.5 text-[13px] shadow-[0_8px_24px_rgb(0_0_0/0.12)]',
+        'toast-in fixed bottom-5 left-1/2 z-50 flex w-max max-w-[min(640px,calc(100vw-32px))] -translate-x-1/2 items-center gap-4 rounded-[8px] border px-4 py-2.5 text-[13px] shadow-[0_8px_24px_rgb(0_0_0/0.12)]',
         notice.kind === 'error' ? 'border-[#f1c9c1] bg-late-soft text-late-ink' : notice.kind === 'success' ? 'border-[#cfe6d8] bg-ok-soft text-ok' : 'border-line bg-surface text-ink',
       )}
       data-testid="notice"
@@ -265,8 +278,11 @@ function Busy() {
   const busy = useProject((s) => s.busy);
   if (!busy) return null;
   return (
-    <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center" role="status" aria-live="polite">
-      <div className="rounded-[6px] bg-ink px-4 py-2 text-[13px] text-white shadow-[0_6px_18px_rgba(0,0,0,0.18)]">{busy}</div>
+    <div className="fixed inset-x-0 bottom-5 z-50 flex justify-center" role="status" aria-live="polite">
+      <div className="busy-in flex items-center gap-2.5 rounded-[8px] bg-ink py-2 pr-4 pl-3 text-[13px] text-white shadow-[0_8px_24px_rgb(0_0_0/0.18)]">
+        <span className="mark-busy flex rounded-[4px] bg-white p-[3px]"><Mark size={14} /></span>
+        {busy}
+      </div>
     </div>
   );
 }

@@ -118,6 +118,7 @@ npm run dev                    # Vite dev server with the same local API
 - `.mpp` files are converted from a temporary copy; the original is never written to.
 - `data/`, `*.mpp`, `*.mpx`, `*.mpt` and `*.schedrift.json` are git-ignored, so real schedules are never committed.
 - The repository contains synthetic data only: the Atlas sample and generated test fixtures.
+- After your first project opens, a one-time card says thank you and links to this repository. Dismissing it stores a single flag in your browser's local storage. Nothing is sent anywhere, and there is no analytics or telemetry.
 
 ---
 

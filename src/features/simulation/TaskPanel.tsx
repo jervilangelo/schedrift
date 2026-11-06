@@ -78,11 +78,11 @@ export function TaskPanel() {
       )}
 
       {showTab === 'details' && primary ? (
-        <div className="min-h-0 flex-1 overflow-auto" role="tabpanel" aria-labelledby="tab-details">
+        <div key="details" className="view-in min-h-0 flex-1 overflow-auto" role="tabpanel" aria-labelledby="tab-details">
           <TaskDetails task={primary} o={original.byUid.get(primary.uid)!} s={simulated?.byUid.get(primary.uid)} onJump={(u) => select(u)} />
         </div>
       ) : (
-        <section className="flex min-h-0 flex-1 flex-col" role="tabpanel" aria-labelledby={primary ? 'tab-simulate' : undefined} aria-label={primary ? undefined : 'Simulate a delay'}>
+        <section key="simulate" className="view-in flex min-h-0 flex-1 flex-col" role="tabpanel" aria-labelledby={primary ? 'tab-simulate' : undefined} aria-label={primary ? undefined : 'Simulate a delay'}>
           <p className="px-4 pt-2.5 pb-1.5 text-[12px] leading-[16px] text-ink-3">
             Working days · Ctrl+click tasks to add them · <span className="inline-block h-2 w-[2px] translate-y-[1px] rounded-[1px] bg-ok" aria-hidden="true" /> marks the float a delay can use without moving others
           </p>
@@ -155,7 +155,7 @@ function TabButton({ active, onClick, id, children }: { active: boolean; onClick
       id={id}
       aria-selected={active}
       onClick={onClick}
-      className={cx('-mb-px flex h-9 items-center border-b-2 text-[13px] font-medium', active ? 'border-ink text-ink' : 'border-transparent text-ink-3 hover:text-ink')}
+      className={cx('-mb-px flex h-9 items-center border-b-2 text-[13px] font-medium transition-colors duration-150', active ? 'border-ink text-ink' : 'border-transparent text-ink-3 hover:text-ink')}
     >
       {children}
     </button>

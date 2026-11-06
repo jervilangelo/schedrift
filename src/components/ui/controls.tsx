@@ -152,7 +152,7 @@ export function Dialog({ open, onClose, title, children, width = 560 }: { open: 
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
-      className="m-auto max-h-[85vh] rounded-[8px] border border-line bg-surface p-0 text-ink shadow-[0_12px_32px_rgba(0,0,0,0.14)]"
+      className="m-auto max-h-[85vh] rounded-[12px] border border-line bg-surface p-0 text-ink shadow-[0_1px_2px_rgb(31_34_38/0.06),0_16px_40px_rgb(31_34_38/0.14)]"
       style={{ width: `min(${width}px, calc(100vw - 32px))` }}
       aria-label={title}
     >
