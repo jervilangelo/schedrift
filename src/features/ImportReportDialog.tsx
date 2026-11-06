@@ -22,7 +22,7 @@ export function ImportReportDialog() {
         <p className={cx('mt-3 flex items-start gap-2 rounded-[6px] px-3 py-2 text-[13px]', check.matched === check.compared ? 'bg-ok-soft text-ok' : 'bg-sim-soft text-sim-ink')}>
           <span className="mt-[2px]">{check.matched === check.compared ? <Check size={14} /> : <Alert size={14} />}</span>
           <span>
-            Schedule check: Schedrift recalculates {check.matched} of {check.compared} tasks to the same dates as the file.
+            Dates: {check.matched} of {check.compared} tasks show the start and finish from the file.
             {check.matched !== check.compared && ' Tasks that differ are listed in Project data.'}
           </span>
         </p>

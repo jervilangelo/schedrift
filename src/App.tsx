@@ -152,21 +152,21 @@ function AppBar() {
       {project && (
         <>
           <span className="h-5 w-px bg-line" aria-hidden="true" />
-          <div className="flex min-w-0 flex-col leading-[16px]">
-            <span className="truncate text-[14px] font-medium" data-testid="project-name">{project.name}</span>
+          <div className="flex min-w-0 max-w-[300px] flex-col leading-[16px]">
+            <span className="truncate text-[14px] font-medium" data-testid="project-name" title={project.name}>{project.name}</span>
             <button type="button" className="truncate text-left text-[12px] text-ink-3 hover:text-ink" onClick={() => setReportOpen(true)} title="Show import report">
               {project.sourceFileName}
               {dirty ? ' · unsaved changes' : savedAt ? ' · saved' : ''}
             </button>
           </div>
-          <nav className="ml-4 flex items-center gap-1" aria-label="Views">
+          <nav className="ml-2 flex shrink-0 items-center gap-0.5 rounded-[8px] bg-raised p-0.5" aria-label="Views">
             {tabs.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setView(t.id)}
                 aria-current={view === t.id ? 'page' : undefined}
-                className={cx('h-8 rounded-[6px] px-3 text-[13px] font-medium transition-colors', view === t.id ? 'bg-active text-ink' : 'text-ink-2 hover:bg-raised hover:text-ink')}
+                className={cx('h-7 rounded-[6px] px-3 text-[13px] font-medium whitespace-nowrap transition-colors', view === t.id ? 'bg-surface text-ink shadow-[0_0_0_1px_var(--color-line),0_1px_2px_rgb(0_0_0/0.04)]' : 'text-ink-2 hover:text-ink')}
               >
                 {t.label}
                 {t.id === 'simulation' && simulated && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-sim align-middle" aria-label="active" />}
@@ -175,9 +175,9 @@ function AppBar() {
           </nav>
         </>
       )}
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         {picker.input}
-        <Button variant="ghost" icon={<Upload />} onClick={picker.open} data-testid="import-button">Import</Button>
+        <Button variant="ghost" icon={<Upload />} onClick={picker.open} data-testid="import-button" aria-label="Import" title="Import an .mpp or MS Project XML file"><span className="hidden xl:inline">Import</span></Button>
         {project && (
           <>
             <input
@@ -192,14 +192,15 @@ function AppBar() {
                 e.target.value = '';
               }}
             />
-            <Button variant="ghost" icon={<Table />} onClick={() => masterInput.current?.click()} data-testid="master-button" title="Take dates, durations and status from an Excel master sheet; keep this file's dependencies">
-              Update from Excel
+            <Button variant="ghost" icon={<Table />} onClick={() => masterInput.current?.click()} data-testid="master-button" aria-label="Update from Excel" title="Take dates, durations and status from an Excel master sheet; keep this file's dependencies">
+              <span className="hidden xl:inline">Update from Excel</span>
             </Button>
           </>
         )}
         {project && (
           <>
-            <Button variant="ghost" icon={<Download />} onClick={exportFile} title="Download a .schedrift.json copy">Export</Button>
+            <Button variant="ghost" icon={<Download />} onClick={exportFile} aria-label="Export" title="Download a .schedrift.json copy"><span className="hidden xl:inline">Export</span></Button>
+            <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
             <Button icon={<Save />} onClick={() => void save()} data-testid="save-button" title="Save locally (Ctrl+S)">Save</Button>
             <Button variant="primary" icon={<Maximize />} onClick={() => void present()} data-testid="present-button">Present</Button>
           </>
@@ -249,13 +250,13 @@ function Notice() {
     <div
       role={notice.kind === 'error' ? 'alert' : 'status'}
       className={cx(
-        'flex items-center gap-3 border-b px-4 py-2 text-[13px]',
-        notice.kind === 'error' ? 'border-[#f1c9c1] bg-late-soft text-late-ink' : notice.kind === 'success' ? 'border-[#cfe6d8] bg-ok-soft text-ok' : 'border-line bg-raised text-ink',
+        'fixed bottom-5 left-1/2 z-50 flex w-max max-w-[min(640px,calc(100vw-32px))] -translate-x-1/2 items-center gap-4 rounded-[8px] border px-4 py-2.5 text-[13px] shadow-[0_8px_24px_rgb(0_0_0/0.12)]',
+        notice.kind === 'error' ? 'border-[#f1c9c1] bg-late-soft text-late-ink' : notice.kind === 'success' ? 'border-[#cfe6d8] bg-ok-soft text-ok' : 'border-line bg-surface text-ink',
       )}
       data-testid="notice"
     >
-      <span className="flex-1">{notice.text}</span>
-      <button type="button" className="text-[12px] underline-offset-2 hover:underline" onClick={() => setNotice(null)}>Dismiss</button>
+      <span className="min-w-0 flex-1">{notice.text}</span>
+      <button type="button" className="shrink-0 text-[12px] font-medium underline-offset-2 hover:underline" onClick={() => setNotice(null)}>Dismiss</button>
     </div>
   );
 }

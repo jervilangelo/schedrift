@@ -8,12 +8,40 @@ export interface Row {
   depth: number;
   hasChildren: boolean;
   collapsed: boolean;
+  /** Executive view only: a header row for one rollout wave, spanning these top-level tasks. */
+  wave?: { label: string; members: number[] };
+}
+
+const GO_LIVE = /go[\s-]?live/i;
+const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/**
+ * Splits the top-level outline into rollout waves: a new wave starts when a top-level name
+ * repeats one already used in the current wave (e.g. a second "Requirements Gathering").
+ */
+export function waves(tops: Task[]): Task[][] {
+  const out: Task[][] = [];
+  let cur: Task[] = [];
+  let names = new Set<string>();
+  for (const t of tops) {
+    const n = norm(t.name);
+    if (names.has(n) && cur.length) {
+      out.push(cur);
+      cur = [];
+      names = new Set();
+    }
+    cur.push(t);
+    names.add(n);
+  }
+  if (cur.length) out.push(cur);
+  return out;
 }
 
 /**
  * Rows shown in the Gantt.
  * Detailed: the full outline, minus collapsed branches.
- * Executive: top-level phases, every milestone (under its phase) and the Go-Live task.
+ * Executive: top-level phases with their key dates (milestones and Go-Live tasks), grouped
+ * into rollout waves when the outline repeats itself.
  */
 export function visibleRows(project: Project, collapsed: ReadonlySet<number>, mode: GanttMode): Row[] {
   const children = new Map<number | null, Task[]>();
@@ -25,22 +53,30 @@ export function visibleRows(project: Project, collapsed: ReadonlySet<number>, mo
   const rows: Row[] = [];
 
   if (mode === 'executive') {
-    const milestonesUnder = (uid: number): Task[] => {
+    const keyDatesUnder = (uid: number): Task[] => {
       const out: Task[] = [];
       const walk = (u: number) => {
         for (const c of children.get(u) ?? []) {
-          if ((c.milestone || c.uid === project.goLiveUid) && !c.summary) out.push(c);
+          if (!c.summary && (c.milestone || c.uid === project.goLiveUid || GO_LIVE.test(c.name))) out.push(c);
           walk(c.uid);
         }
       };
       walk(uid);
       return out;
     };
-    for (const top of children.get(null) ?? []) {
-      const ms = top.summary ? milestonesUnder(top.uid) : [];
-      rows.push({ uid: top.uid, task: top, depth: 0, hasChildren: false, collapsed: false });
-      for (const m of ms) rows.push({ uid: m.uid, task: m, depth: 1, hasChildren: false, collapsed: false });
-    }
+    const groups = waves(children.get(null) ?? []);
+    groups.forEach((group, w) => {
+      if (groups.length > 1) {
+        const header = {
+          ...group[0]!, uid: -(w + 1), id: -(w + 1), name: `Phase ${w + 1}`, summary: true, milestone: false, predecessors: [], parentUid: null,
+        } as Task;
+        rows.push({ uid: header.uid, task: header, depth: 0, hasChildren: false, collapsed: false, wave: { label: header.name, members: group.map((t) => t.uid) } });
+      }
+      for (const top of group) {
+        rows.push({ uid: top.uid, task: top, depth: 0, hasChildren: false, collapsed: false });
+        if (top.summary) for (const m of keyDatesUnder(top.uid)) rows.push({ uid: m.uid, task: m, depth: 1, hasChildren: false, collapsed: false });
+      }
+    });
     return rows;
   }
 

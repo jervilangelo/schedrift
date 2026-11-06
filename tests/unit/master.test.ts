@@ -89,12 +89,9 @@ describe('applying the master', () => {
     expect(update.goLive?.uid).toBe(26);
     expect(formatInstantISO(update.goLive!.finish, false)).toBe('2027-03-04');
   });
-  it('reports Excel dates that a dependency does not allow, with the reason', () => {
-    const d = update.differences.find((x) => x.uid === 20)!;
-    expect(formatInstantISO(d.excelStart, false)).toBe('2026-11-02');
-    expect(formatInstantISO(d.start, false)).toBe('2026-11-27');
-    expect(d.reason).toContain('System configuration');
-    expect(update.differences.map((x) => x.uid)).toEqual([20]);
+  it('keeps the Excel dates exactly, even where a dependency would not allow them', () => {
+    expect(formatInstantISO(t(20).start, false)).toBe('2026-11-02');
+    expect(update.differences).toEqual([]);
   });
   it('lists rows only in Excel and similar-name matches', () => {
     expect(update.excelOnly.map((x) => x.name)).toEqual(['Core HR']);
@@ -105,7 +102,7 @@ describe('applying the master', () => {
     expect(formatInstantISO(t(6).actualFinish!, false)).toBe('2026-09-11');
   });
   it('updates the schedule check against the Excel dates', () => {
-    expect(update.project.importReport.scheduleCheck?.mismatchedUids).toEqual([20]);
+    expect(update.project.importReport.scheduleCheck?.mismatchedUids).toEqual([]);
   });
   it('never mutates the original project', () => {
     expect(project.tasks.find((x) => x.uid === 19)!.duration).toBe(20);

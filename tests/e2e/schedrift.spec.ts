@@ -57,6 +57,7 @@ test('expands and collapses phases, switches Executive/Detailed and zoom', async
 test('selecting a task shows its scheduling details', async ({ page }) => {
   await openSample(page);
   await row(page, 'Training materials').click();
+  await page.getByRole('tab', { name: 'Details' }).click();
   const panel = page.getByTestId('task-details');
   await expect(panel).toContainText('Training materials');
   await expect(panel).toContainText('System configuration'); // predecessor
@@ -69,7 +70,6 @@ test('single-task delay on a critical task moves Go-Live and shows the chain', a
   await openSample(page);
   await row(page, 'User acceptance testing (UAT)').click();
   await delay(page, 'User acceptance testing (UAT)', 'Start delay', 10);
-  await page.getByTestId('run-simulation').click();
   await expect(page.getByTestId('golive-simulated')).toHaveText('Thu 25 Mar 2027');
   await expect(page.getByTestId('golive-variance')).toHaveText('+10 days');
   await expect(page.getByTestId('impact-summary')).toContainText('User acceptance testing (UAT) → UAT sign-off');
@@ -89,7 +89,6 @@ test('a delay within float is absorbed', async ({ page }) => {
   await openSample(page);
   await row(page, 'Training materials').click();
   await delay(page, 'Training materials', 'Start delay', 10);
-  await page.getByTestId('run-simulation').click();
   await expect(page.getByTestId('golive-variance')).toHaveText('0 days');
   await expect(page.getByTestId('impact-summary')).toContainText('absorbs');
 });
@@ -100,12 +99,11 @@ test('multiple-task scenario does not double count overlapping delays', async ({
   await row(page, 'Production migration').click({ modifiers: ['Control'] });
   await delay(page, 'User acceptance testing (UAT)', 'Start delay', 5);
   await delay(page, 'Production migration', 'Start delay', 3);
-  await page.getByTestId('run-simulation').click();
   await expect(page.getByTestId('golive-variance')).toHaveText('+5 days');
 
   // Reset restores the original schedule
   await page.getByTestId('reset-simulation').click();
-  await expect(page.getByTestId('golive-simulated')).toHaveText('—');
+  await expect(page.getByTestId('golive-simulated')).toHaveCount(0);
   await expect(page.locator('g[data-state=changed]')).toHaveCount(0);
 });
 
@@ -115,11 +113,10 @@ test('duration extensions on a chain add up', async ({ page }) => {
   await row(page, 'Production migration').click({ modifiers: ['Control'] });
   await delay(page, 'Cutover rehearsal', 'Duration extension', 2);
   await delay(page, 'Production migration', 'Duration extension', 1);
-  await page.getByTestId('run-simulation').click();
   await expect(page.getByTestId('golive-variance')).toHaveText('+3 days');
 });
 
-test('editing dependencies recalculates and rejects cycles', async ({ page }) => {
+test('editing dependencies keeps the dates and rejects cycles', async ({ page }) => {
   await openSample(page);
   await page.getByRole('button', { name: 'Project data' }).click();
   await expect(page.getByTestId('validation-panel')).toContainText('23 of 23');
@@ -137,15 +134,14 @@ test('editing dependencies recalculates and rejects cycles', async ({ page }) =>
   await page.getByRole('button', { name: 'Edit dependencies of Cutover rehearsal' }).click();
   await page.getByLabel('Lag in working days').first().fill('5');
   await page.getByTestId('save-dependencies').click();
-  await expect(page.getByTestId('golive-original')).toHaveText('Thu 18 Mar 2027');
-  await expect(page.locator('tr[data-uid="24"]')).toContainText('+5d');
+  // Dates come from the file: a new lag does not move anything by itself.
+  await expect(page.getByTestId('golive-original')).toHaveText('Thu 11 Mar 2027');
 });
 
 test('saves locally and reopens with the scenario', async ({ page }) => {
   await openSample(page);
   await row(page, 'User acceptance testing (UAT)').click();
   await delay(page, 'User acceptance testing (UAT)', 'Start delay', 4);
-  await page.getByTestId('run-simulation').click();
   await page.getByTestId('save-button').click();
   await expect(page.getByTestId('notice')).toContainText('saved');
 
@@ -188,21 +184,15 @@ test('reports circular dependencies on import without failing', async ({ page })
   await expect(page.getByTestId('gantt')).toBeVisible();
 });
 
-test('explains tasks whose recalculated dates differ from the file', async ({ page }) => {
+test('keeps the file dates of a leveled task', async ({ page }) => {
   const xml = readFileSync(join(process.cwd(), 'public/samples/atlas-erp-rollout.xml'), 'utf8')
     .replace(/(<UID>20<\/UID>[\s\S]*?<Start>)2026-11-27T08:00:00(<\/Start>\s*<Finish>)2026-12-11T17:00:00/, '$12026-12-04T08:00:00$22026-12-18T17:00:00')
     .replace(/(<UID>20<\/UID>[\s\S]*?<CalendarUID>-1<\/CalendarUID>)/, '$1\n      <LevelingDelay>24000</LevelingDelay>');
   await page.goto('/');
   await page.getByTestId('file-input').first().setInputFiles({ name: 'leveled.xml', mimeType: 'text/xml', buffer: Buffer.from(xml) });
-  await expect(page.getByTestId('import-report')).toContainText('differs from the file');
-  await page.getByRole('button', { name: 'Review in Project data' }).click();
-  const details = page.getByTestId('schedule-check-details');
-  await expect(details).toContainText('Training materials');
-  await expect(details).toContainText('4 Dec 2026 → 18 Dec 2026');
-  await expect(details).toContainText('27 Nov 2026 → 11 Dec 2026');
-  await expect(details).toContainText('−5d');
-  await expect(details).toContainText('resource-leveling delay of 5 d');
-  await expect(details).toContainText('Follows “System configuration” (FS)');
+  await page.getByTitle('Show import report').click();
+  await expect(page.getByTestId('import-report')).toContainText('already include it');
+  await expect(page.getByTestId('import-report')).not.toContainText('differs from the file');
 });
 
 test('updates dates from an Excel master while keeping the dependencies', async ({ page }) => {
@@ -214,8 +204,7 @@ test('updates dates from an Excel master while keeping the dependencies', async 
   });
   await expect(page.getByTestId('master-golive')).toContainText('Go-Live: Thu 4 Mar 2027');
   await expect(page.getByTestId('master-golive')).toContainText('Same as the Excel master');
-  await expect(page.getByTestId('master-differences')).toContainText('Training materials');
-  await expect(page.getByTestId('master-differences')).toContainText('Waits for “System configuration”');
+  await expect(page.getByTestId('master-differences')).toHaveCount(0);
   await expect(page.getByTestId('master-excel-only')).toContainText('Core HR');
   await page.getByTestId('apply-master').click();
   await expect(page.getByTestId('golive-original')).toHaveText('Thu 4 Mar 2027');
@@ -224,7 +213,6 @@ test('updates dates from an Excel master while keeping the dependencies', async 
   // Simulation runs on top of the updated plan
   await row(page, 'Cutover rehearsal').click();
   await delay(page, 'Cutover rehearsal', 'Start delay', 3);
-  await page.getByTestId('run-simulation').click();
   await expect(page.getByTestId('golive-variance')).toHaveText('+3 days');
 });
 
@@ -256,5 +244,6 @@ test('imports a real .mpp file through MPXJ', async ({ page, request }) => {
   await expect(page.getByTestId('project-name')).toBeVisible();
   await expect(page.locator('[role=row][data-uid]')).toHaveCount(5);
   await row(page, 'Task 2').click();
+  await page.getByRole('tab', { name: 'Details' }).click();
   await expect(page.getByTestId('task-details')).toContainText('Task 1');
 });

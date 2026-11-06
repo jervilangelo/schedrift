@@ -5,7 +5,7 @@ import { EPS } from './time';
 /** Why a task's early start is where it is. */
 export type Driver =
   | { kind: 'link'; predUid: number; type: Link['type'] }
-  | { kind: 'projectStart' }
+  | { kind: 'file' }
   | { kind: 'constraint' }
   | { kind: 'scenario' }
   | { kind: 'actual' }
@@ -179,11 +179,30 @@ function shift(cal: WorkCalendar, t: Instant, link: Link, sign: 1 | -1): number 
 }
 
 /**
- * Schedule a project with the Critical Path Method.
+ * Working days by which the file's own dates already break a link (0 when the link is respected).
+ * Measured on the successor's calendar against the reference (un-simulated) schedule.
+ */
+function linkOverlap(net: Network, e: Edge, ref: Map<number, TaskSchedule>, succStart: Instant, succFinish: Instant): number {
+  const p = ref.get(e.pred);
+  if (!p) return 0;
+  const cal = calFor(net, net.tasks.get(e.succ)!);
+  const from = e.link.type === 'FS' || e.link.type === 'FF' ? p.ef : p.es;
+  const onStart = e.link.type === 'FS' || e.link.type === 'SS';
+  const required = shift(cal, from, e.link, 1);
+  const actual = cal.toOrd(onStart ? succStart : succFinish);
+  return Math.max(0, required - actual);
+}
+
+/**
+ * Schedule a project from the dates in the file.
+ *
+ * Every task keeps the start and finish it has in the project file; links never move a task on
+ * their own. In a simulation, a delayed task pushes its successors only once it uses up the gap
+ * they already had. Where the file's dates already overlap a link, that overlap is kept and only
+ * further slippage of the predecessor is passed on.
  *
  * @param scenario optional delay scenario (never mutates the project)
- * @param original the un-simulated result; required to interpret scenario start delays.
- *                 Computed automatically if omitted.
+ * @param original the un-simulated result. Computed automatically if omitted.
  */
 export function schedule(project: Project, scenario?: Scenario, original?: ScheduleResult): ScheduleResult {
   const net = buildNetwork(project);
@@ -193,11 +212,7 @@ export function schedule(project: Project, scenario?: Scenario, original?: Sched
 
   const byUid = new Map<number, TaskSchedule>();
   const esOrd = new Map<number, number>();
-  const durOf = (t: Task): number => {
-    if (t.milestone && t.duration === 0) return 0;
-    const extra = items.get(t.uid)?.durationDelta ?? 0;
-    return Math.max(0, t.duration + (isComplete(t) ? 0 : extra));
-  };
+  const ref = base?.byUid ?? byUid;
 
   // ---------- forward pass ----------
   for (const uid of order) {
@@ -215,104 +230,66 @@ export function schedule(project: Project, scenario?: Scenario, original?: Sched
       continue;
     }
     const cal = calFor(net, t);
-    const dur = durOf(t);
     const complete = isComplete(t);
     const started = isStarted(t);
+    const s0 = cal.toOrd(t.start);
+    const dur0 = Math.max(0, cal.toOrd(t.finish) - s0);
+    const item = items.get(uid);
+    const dur = Math.max(0, dur0 + (complete || dur0 === 0 ? 0 : (item?.durationDelta ?? 0)));
 
-    if (!t.active) {
-      byUid.set(uid, { uid, es: t.start, ef: t.finish, ls: t.start, lf: t.finish, totalFloat: null, critical: false, duration: t.duration, driver: { kind: 'inactive' }, complete, started });
+    if (!t.active || complete) {
+      const driver: Driver = { kind: t.active ? 'actual' : 'inactive' };
+      byUid.set(uid, { uid, es: t.start, ef: t.finish, ls: t.start, lf: t.finish, totalFloat: null, critical: false, duration: dur0, driver, complete, started });
+      if (t.active) esOrd.set(uid, s0);
       continue;
     }
-    if (complete) {
-      const es = t.actualStart ?? t.start;
-      const ef = t.actualFinish ?? t.finish;
-      byUid.set(uid, { uid, es, ef, ls: es, lf: ef, totalFloat: null, critical: false, duration: t.duration, driver: { kind: 'actual' }, complete, started });
-      esOrd.set(uid, cal.toOrd(es));
-      continue;
-    }
 
-    // Collect start candidates (ordinal on this task's calendar) + whether they come from a finish.
-    let best = cal.toOrd(project.projectStart);
-    let bestFromFinish = false;
-    let driver: Driver = { kind: 'projectStart' };
-    let finishFloor = -Infinity; // for started tasks (FF/SF links)
-    const consider = (ord: number, fromFinish: boolean, d: Driver) => {
-      if (ord > best + EPS || (Math.abs(ord - best) <= EPS && fromFinish && !bestFromFinish)) {
-        best = ord;
-        bestFromFinish = fromFinish;
+    let best = s0 + (item && !started ? item.startDelay : 0);
+    let fromFinish = false;
+    let driver: Driver = item && item.startDelay > 0 && !started ? { kind: 'scenario' } : { kind: 'file' };
+    let finishFloor = -Infinity;
+    const consider = (ord: number, ff: boolean, d: Driver) => {
+      const tie = Math.abs(ord - best) <= EPS;
+      if (ord > best + EPS || (tie && driver.kind === 'file') || (tie && ff && !fromFinish)) {
+        best = Math.max(best, ord);
+        fromFinish = ff;
         driver = d;
       }
     };
     for (const e of net.incoming.get(uid) ?? []) {
       const p = byUid.get(e.pred);
       if (!p) continue;
+      const over = linkOverlap(net, e, ref, t.start, t.finish);
       const d: Driver = { kind: 'link', predUid: e.pred, type: e.link.type };
       switch (e.link.type) {
-        case 'FS': consider(shift(cal, p.ef, e.link, 1), true, d); break;
-        case 'SS': consider(shift(cal, p.es, e.link, 1), false, d); break;
-        case 'FF': {
-          const f = shift(cal, p.ef, e.link, 1);
-          finishFloor = Math.max(finishFloor, f);
-          consider(f - dur, true, d);
-          break;
-        }
+        case 'FS': consider(shift(cal, p.ef, e.link, 1) - over, true, d); break;
+        case 'SS': consider(shift(cal, p.es, e.link, 1) - over, false, d); break;
+        case 'FF':
         case 'SF': {
-          const f = shift(cal, p.es, e.link, 1);
+          const f = shift(cal, e.link.type === 'FF' ? p.ef : p.es, e.link, 1) - over;
           finishFloor = Math.max(finishFloor, f);
-          consider(f - dur, false, d);
+          consider(f - dur, e.link.type === 'FF', d);
           break;
         }
       }
     }
-    const c = t.constraint;
-    if (c.date !== undefined) {
-      if (c.type === 'SNET') consider(cal.toOrd(c.date), false, { kind: 'constraint' });
-      if (c.type === 'FNET') consider(cal.toOrd(c.date) - dur, true, { kind: 'constraint' });
-    }
-    const item = items.get(uid);
-    if (item && item.startDelay > 0 && base && !started) {
-      const b = base.byUid.get(uid);
-      if (b) consider(cal.toOrd(b.es) + item.startDelay, false, { kind: 'scenario' });
-    }
-
-    let start = best;
-    let fromFinish = bestFromFinish;
-    let conflict: TaskSchedule['conflict'];
-    const logicStartInstant = () => (fromFinish && dur === 0 ? cal.fromOrdFinish(best) : cal.fromOrdStart(best));
 
     if (started) {
-      const es = t.actualStart ?? t.start;
-      const s = cal.toOrd(es);
-      let f = s + dur;
-      if (finishFloor > f) f = finishFloor;
-      esOrd.set(uid, s);
-      byUid.set(uid, { uid, es, ef: dur === 0 && f === s ? es : cal.fromOrdFinish(f), ls: es, lf: es, totalFloat: null, critical: false, duration: f - s, driver: { kind: 'actual' }, complete, started });
+      // Already under way: the start stays; only the finish can move.
+      let f = s0 + dur;
+      if (finishFloor > f + EPS) f = finishFloor;
+      const moved = Math.abs(f - (s0 + dur0)) > EPS;
+      esOrd.set(uid, s0);
+      byUid.set(uid, { uid, es: t.start, ef: moved ? cal.fromOrdFinish(f) : t.finish, ls: t.start, lf: t.start, totalFloat: null, critical: false, duration: f - s0, driver: moved && (driver as Driver).kind === 'link' ? driver : { kind: 'actual' }, complete, started });
       continue;
     }
-    const hard = c.date !== undefined && (c.type === 'MSO' || c.type === 'MFO');
-    if (hard) {
-      const fixed = c.type === 'MSO' ? cal.toOrd(c.date!) : cal.toOrd(c.date!) - dur;
-      if (best > fixed + EPS) conflict = { logicStart: logicStartInstant(), reason: `${c.type} constraint` };
-      start = fixed;
-      fromFinish = c.type === 'MFO';
-      driver = { kind: 'constraint' };
-    } else if (t.manual && !item) {
-      const fixed = cal.toOrd(t.start);
-      if (best > fixed + EPS) conflict = { logicStart: logicStartInstant(), reason: 'manually scheduled task' };
-      start = fixed;
-      fromFinish = false;
-      driver = { kind: 'manual' };
-    } else if (t.manual && item) {
-      // Simulating a manual task: links still do not move it, but its own pinned start moves by the delay.
-      start = cal.toOrd(t.start) + item.startDelay;
-      fromFinish = false;
-      driver = { kind: 'scenario' };
-    }
 
+    const start = Math.max(best, s0);
     esOrd.set(uid, start);
-    const es = dur === 0 && fromFinish ? cal.fromOrdFinish(start) : cal.fromOrdStart(start);
-    const ef = dur === 0 ? es : cal.fromOrdFinish(start + dur);
-    byUid.set(uid, { uid, es, ef, ls: es, lf: ef, totalFloat: null, critical: false, duration: dur, driver, complete, started, conflict });
+    const unchanged = Math.abs(start - s0) <= EPS && Math.abs(dur - dur0) <= EPS;
+    const es = unchanged ? t.start : dur === 0 && fromFinish ? cal.fromOrdFinish(start) : cal.fromOrdStart(start);
+    const ef = unchanged ? t.finish : dur === 0 ? es : cal.fromOrdFinish(start + dur);
+    byUid.set(uid, { uid, es, ef, ls: es, lf: ef, totalFloat: null, critical: false, duration: dur, driver, complete, started });
   }
 
   // Project dates (active, scheduled tasks only)
@@ -348,11 +325,12 @@ export function schedule(project: Project, scenario?: Scenario, original?: Sched
       if (!sc || sc.complete) continue;
       const st = net.tasks.get(e.succ)!;
       const sCal = calFor(net, st);
+      const over = linkOverlap(net, e, ref, st.start, st.finish);
       switch (e.link.type) {
-        case 'FS': lf = Math.min(lf, cal.toOrd(sCal.fromOrdStart(shift(sCal, sc.ls, e.link, -1)))); break;
-        case 'FF': lf = Math.min(lf, cal.toOrd(sCal.fromOrdFinish(shift(sCal, sc.lf, e.link, -1)))); break;
-        case 'SS': lsLim = Math.min(lsLim, cal.toOrd(sCal.fromOrdStart(shift(sCal, sc.ls, e.link, -1)))); break;
-        case 'SF': lsLim = Math.min(lsLim, cal.toOrd(sCal.fromOrdFinish(shift(sCal, sc.lf, e.link, -1)))); break;
+        case 'FS': lf = Math.min(lf, cal.toOrd(sCal.fromOrdStart(shift(sCal, sc.ls, e.link, -1) + over))); break;
+        case 'FF': lf = Math.min(lf, cal.toOrd(sCal.fromOrdFinish(shift(sCal, sc.lf, e.link, -1) + over))); break;
+        case 'SS': lsLim = Math.min(lsLim, cal.toOrd(sCal.fromOrdStart(shift(sCal, sc.ls, e.link, -1) + over))); break;
+        case 'SF': lsLim = Math.min(lsLim, cal.toOrd(sCal.fromOrdFinish(shift(sCal, sc.lf, e.link, -1) + over))); break;
       }
     }
     const parent = t.parentUid;
@@ -370,11 +348,6 @@ export function schedule(project: Project, scenario?: Scenario, original?: Sched
     }
     if (!t.active || s.complete) continue;
 
-    const c = t.constraint;
-    if (c.date !== undefined) {
-      if (c.type === 'FNLT' || c.type === 'MFO') lf = Math.min(lf, cal.toOrd(c.date));
-      if (c.type === 'SNLT' || c.type === 'MSO') lsLim = Math.min(lsLim, cal.toOrd(c.date));
-    }
     if (t.deadline !== undefined) lf = Math.min(lf, cal.toOrd(t.deadline));
 
     const dur = s.duration;
@@ -414,4 +387,24 @@ export function workingDelta(project: Project, uid: number, a: Instant, b: Insta
   const cal = t ? calFor(n, t) : n.defaultCal;
   const d = cal.toOrd(b) - cal.toOrd(a);
   return Math.abs(d) < EPS ? 0 : d;
+}
+
+/** Links whose successor, in the file's own dates, starts (or finishes) before the link allows. */
+export function brokenLinks(project: Project, result: ScheduleResult): { predUid: number; succUid: number; days: number }[] {
+  const net = buildNetwork(project);
+  const out = new Map<string, { predUid: number; succUid: number; days: number }>();
+  for (const edges of net.incoming.values()) {
+    for (const e of edges) {
+      const st = net.tasks.get(e.succ)!;
+      if (!st.active || isComplete(st)) continue;
+      const days = linkOverlap(net, e, result.byUid, st.start, st.finish);
+      if (days <= 0.13) continue;
+      // Report a link into a summary once, against the summary itself.
+      const succUid = st.predecessors.includes(e.link) ? e.succ : (project.tasks.find((t) => t.predecessors.includes(e.link))?.uid ?? e.succ);
+      const key = `${e.pred}>${succUid}`;
+      const prev = out.get(key);
+      if (!prev || days > prev.days) out.set(key, { predUid: e.pred, succUid, days: Math.round(days * 10) / 10 });
+    }
+  }
+  return [...out.values()];
 }

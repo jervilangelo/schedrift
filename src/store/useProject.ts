@@ -35,6 +35,7 @@ interface State {
   view: View;
   zoom: Zoom;
   mode: GanttMode;
+  zoomBeforeExecutive?: Zoom;
   collapsed: number[];
   criticalOnly: boolean;
   compare: Compare;
@@ -94,6 +95,14 @@ function compute(project: Project, applied: Scenario | null) {
   const simulated = schedule(project, applied, original);
   const impact = analyzeImpact(project, original, simulated, applied, project.goLiveUid);
   return { original, simulated, impact };
+}
+
+/** The simulation follows every change to the delays straight away. */
+function live(project: Project | null, draft: Scenario) {
+  if (!project) return {};
+  const cleaned = cleanScenario(project, draft);
+  const applied = cleaned.items.length ? cleaned : null;
+  return { ...compute(project, applied), applied };
 }
 
 function cleanScenario(project: Project, s: Scenario): Scenario {
@@ -284,11 +293,12 @@ export const useProject = create<State>((set, get) => ({
     next.durationDelta = Math.max(0, Math.min(2000, Number.isFinite(next.durationDelta) ? next.durationDelta : 0));
     if (i >= 0) items[i] = next;
     else items.push(next);
-    set({ draft: { items }, dirty: true });
+    set({ draft: { items }, ...live(get().project, { items }), dirty: true });
   },
 
   removeDraftItem(uid) {
-    set({ draft: { items: get().draft.items.filter((x) => x.uid !== uid) }, dirty: true });
+    const items = get().draft.items.filter((x) => x.uid !== uid);
+    set({ draft: { items }, ...live(get().project, { items }), dirty: true });
   },
 
   runSimulation() {
@@ -329,7 +339,13 @@ export const useProject = create<State>((set, get) => ({
 
   setView(view) { set({ view }); },
   setZoom(zoom) { set({ zoom }); },
-  setMode(mode) { set({ mode }); },
+  setMode(mode) {
+    // Executive view is for presenting: show the whole project at once.
+    const { zoom, mode: was } = get();
+    if (mode === 'executive' && was !== 'executive') set({ mode, zoom: 'fit', zoomBeforeExecutive: zoom });
+    else if (mode === 'detailed' && was === 'executive') set({ mode, zoom: get().zoomBeforeExecutive ?? zoom });
+    else set({ mode });
+  },
   toggleCollapsed(uid) {
     const c = get().collapsed;
     set({ collapsed: c.includes(uid) ? c.filter((u) => u !== uid) : [...c, uid] });

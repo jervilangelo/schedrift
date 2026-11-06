@@ -318,14 +318,14 @@ export function parseMspdi(xml: string, sourceFileName: string): Project {
     if (uids.length) report.push({ level, code, message: message.replace('{n}', String(uids.length)), taskUids: uids });
   };
   add('error', 'invalid-date', flagged.badDates, '{n} task(s) have missing or invalid start/finish dates.');
-  add('warning', 'manual-tasks', flagged.manual, '{n} manually scheduled task(s). Like MS Project, they stay pinned to their dates unless simulated directly.');
+  add('info', 'manual-tasks', flagged.manual, '{n} manually scheduled task(s). Like every task, they keep their dates from the file.');
   add('info', 'inactive-tasks', flagged.inactive, '{n} inactive task(s) are shown but do not affect the schedule.');
-  add('warning', 'alap', flagged.alap, '{n} task(s) use "As Late As Possible". They are scheduled as soon as possible.');
+  add('info', 'alap', flagged.alap, '{n} task(s) use "As Late As Possible". Their dates are taken from the file as they are.');
   add('warning', 'elapsed-duration', flagged.elapsed, '{n} task(s) have elapsed durations, converted to working days (×5/7).');
   add('info', 'percent-lag', flagged.percentLag, '{n} link(s) use percentage lag, converted to working days.');
   add('warning', 'subproject', flagged.subproject, '{n} inserted subproject(s) are not expanded.');
   add('info', 'split-tasks', flagged.split, '{n} task(s) may be split. Splits are not modelled.');
-  add('warning', 'leveling-delay', flagged.leveling, '{n} task(s) carry a resource-leveling delay from MS Project. Schedrift does not apply leveling delays, so these tasks may start earlier than in the file.');
+  add('info', 'leveling-delay', flagged.leveling, '{n} task(s) carry a resource-leveling delay from MS Project. Their dates in the file already include it.');
   if (dropped.null) report.push({ level: 'info', code: 'null-tasks', message: `${dropped.null} blank row(s) skipped.` });
   if (dropped.external) report.push({ level: 'warning', code: 'external-tasks', message: `${dropped.external} external (cross-project) task(s) and their links are not imported.` });
 

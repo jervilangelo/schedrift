@@ -18,10 +18,22 @@ interface Geometry {
   cmpH: number;
 }
 
-function geometry(present: boolean): Geometry {
+function geometry(present: boolean, exec: boolean): Geometry {
+  if (exec) {
+    return present
+      ? { rowH: 48, barH: 24, barY: 9, cmpY: 37, cmpH: 5 }
+      : { rowH: 40, barH: 20, barY: 7, cmpY: 31, cmpH: 5 };
+  }
   return present
     ? { rowH: 40, barH: 18, barY: 7, cmpY: 28, cmpH: 6 }
     : { rowH: 30, barH: 13, barY: 6, cmpY: 21, cmpH: 5 };
+}
+
+/** Start and finish of a rollout wave from its top-level tasks. */
+function waveSpan(members: number[], result: { byUid: Map<number, TaskSchedule> }): { es: number; ef: number } | null {
+  const sched = members.map((u) => result.byUid.get(u)).filter((x): x is TaskSchedule => !!x && Number.isFinite(x.es));
+  if (!sched.length) return null;
+  return { es: Math.min(...sched.map((x) => x.es)), ef: Math.max(...sched.map((x) => x.ef)) };
 }
 
 type BarState = 'normal' | 'scenario' | 'changed';
@@ -48,9 +60,22 @@ export function GanttChart() {
   const select = useProject((s) => s.select);
   const toggleCollapsed = useProject((s) => s.toggleCollapsed);
 
-  const g = geometry(presenting);
-  const collapsed = useMemo(() => new Set(collapsedList), [collapsedList]);
-  const rows = useMemo(() => visibleRows(project, collapsed, mode), [project, collapsed, mode]);
+  const exec = mode === 'executive';
+  const scroller = useRef<HTMLDivElement>(null);
+  const [viewport, setViewport] = useState({ top: 0, height: 800, width: 1200 });
+  const collapsedSet = useMemo(() => new Set(collapsedList), [collapsedList]);
+  const rowsForFit = useMemo(() => visibleRows(project, collapsedSet, mode), [project, collapsedSet, mode]);
+  const g = useMemo(() => {
+    const base = geometry(presenting, exec);
+    if (!exec || !rowsForFit.length) return base;
+    // Executive: size rows so the whole plan fits on one screen (within readable limits).
+    const rowH = Math.max(30, Math.min(base.rowH, Math.floor((viewport.height - HEADER_H - 2) / rowsForFit.length)));
+    const barH = Math.round(rowH * 0.5);
+    const barY = Math.round((rowH - barH) / 2) - 1;
+    return { rowH, barH, barY, cmpY: barY + barH + 2, cmpH: 4 };
+  }, [presenting, exec, rowsForFit.length, viewport.height]);
+  const collapsed = collapsedSet;
+  const rows = rowsForFit;
   const result = simulated ?? original;
 
   const scenarioUids = useMemo(() => new Set([...(applied?.items ?? []), ...draft.items].map((i) => i.uid)), [applied, draft]);
@@ -59,12 +84,10 @@ export function GanttChart() {
   const selected = useMemo(() => new Set(selection), [selection]);
   const today = todayInstant();
 
-  const listW = !listVisible ? 0 : presenting ? 320 : 440;
+  const listW = !listVisible ? 0 : exec ? (presenting ? 460 : 440) : presenting ? 320 : 440;
   const bodyH = rows.length * g.rowH;
 
   // ----- virtualization -----
-  const scroller = useRef<HTMLDivElement>(null);
-  const [viewport, setViewport] = useState({ top: 0, height: 800, width: 1200 });
   const onScroll = useCallback(() => {
     const el = scroller.current;
     if (el) setViewport({ top: el.scrollTop, height: el.clientHeight, width: el.clientWidth });
@@ -155,10 +178,10 @@ export function GanttChart() {
         <div className="sticky top-0 z-20 flex" style={{ height: HEADER_H }}>
           {listVisible && (
             <div className="sticky left-0 z-30 flex shrink-0 items-end border-r border-b border-line bg-surface text-[12px] text-ink-3" style={{ width: listW, height: HEADER_H }}>
-              <ListHeader presenting={presenting} />
+              <ListHeader presenting={presenting} exec={exec} />
             </div>
           )}
-          <TimelineHeader scale={scale} today={today} />
+          <TimelineHeader scale={scale} today={today} goLive={glSim ?? glOrig} />
         </div>
 
         {/* Body */}
@@ -167,6 +190,15 @@ export function GanttChart() {
             <div role="treegrid" aria-label="Tasks" aria-rowcount={rows.length} className="sticky left-0 z-10 shrink-0 border-r border-line bg-surface" style={{ width: listW, height: bodyH }}>
               {slice.map((row, k) => {
                 const i = first + k;
+                if (row.wave) {
+                  const span = waveSpan(row.wave.members, result);
+                  return (
+                    <div key={row.uid} role="row" aria-level={1} data-wave={row.wave.label} className="absolute left-0 flex w-full items-center gap-2 border-b border-line bg-raised px-3" style={{ top: i * g.rowH, height: g.rowH }}>
+                      <span className="text-[11px] font-semibold tracking-[0.06em] text-ink uppercase">{row.wave.label}</span>
+                      {span && <span className="num text-[12px] text-ink-3">{formatDate(span.es, { year: false })} – {formatDate(span.ef)}</span>}
+                    </div>
+                  );
+                }
                 return (
                   <ListRow
                     key={row.uid}
@@ -181,6 +213,7 @@ export function GanttChart() {
                     selected={selected.has(row.uid)}
                     dim={criticalOnly && !result.byUid.get(row.uid)?.critical}
                     presenting={presenting}
+                    exec={exec}
                     isGoLive={row.uid === project.goLiveUid}
                     onSelect={(additive) => select(row.uid, additive)}
                     onToggle={() => toggleCollapsed(row.uid)}
@@ -222,7 +255,25 @@ export function GanttChart() {
               <line x1={scale.x(today)} x2={scale.x(today)} y1={0} y2={bodyH} stroke="var(--color-bar-done)" strokeWidth={1} />
             )}
 
-            <Links
+            {exec && slice.map((row, k) => {
+              if (!row.wave) return null;
+              const span = waveSpan(row.wave.members, result);
+              const y = (first + k) * g.rowH;
+              return (
+                <g key={row.uid} aria-hidden="true">
+                  <rect x={0} y={y} width={scale.width} height={g.rowH} fill="var(--color-raised)" />
+                  <line x1={0} x2={scale.width} y1={y + g.rowH - 0.5} y2={y + g.rowH - 0.5} stroke="var(--color-line)" />
+                  {span && (
+                    <g>
+                      <path d={`M${scale.x(span.es)} ${y + g.rowH - 10} V${y + g.rowH / 2} H${scale.x(span.ef)} V${y + g.rowH - 10}`} fill="none" stroke="var(--color-ink-3)" strokeWidth={1} />
+                      <text x={scale.x(span.es) + 6} y={y + g.rowH / 2 - 5} fontSize={11} fontWeight={600} fill="var(--color-ink-2)" letterSpacing="0.06em">{row.wave.label.toUpperCase()}</text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+
+            {!exec && <Links
               project={project}
               rows={rows}
               rowIndex={rowIndex}
@@ -234,12 +285,12 @@ export function GanttChart() {
               collapsed={collapsed}
               chain={chainUids}
               criticalOnly={criticalOnly}
-            />
+            />}
 
             {slice.map((row, k) => {
               const i = first + k;
               const s = result.byUid.get(row.uid);
-              if (!s) return null;
+              if (!s || row.wave) return null;
               const state: BarState = scenarioUids.has(row.uid) ? 'scenario' : changedUids.has(row.uid) ? 'changed' : 'normal';
               const o = original.byUid.get(row.uid)!;
               let cmp: { a: number; b: number } | null = null;
@@ -258,6 +309,8 @@ export function GanttChart() {
                   dim={criticalOnly && !s.critical}
                   cmp={cmp}
                   isGoLive={row.uid === project.goLiveUid}
+                  exec={exec}
+                  keyDate={exec && row.depth > 0}
                   showName={!listVisible}
                   onSelect={(e) => select(row.uid, e.ctrlKey || e.metaKey || e.shiftKey)}
                 />
@@ -270,7 +323,17 @@ export function GanttChart() {
   );
 }
 
-function ListHeader({ presenting }: { presenting: boolean }) {
+function ListHeader({ presenting, exec }: { presenting: boolean; exec: boolean }) {
+  if (exec) {
+    return (
+      <div className="flex w-full items-center px-3 pb-2" role="row">
+        <span className="flex-1" role="columnheader">Phase / key date</span>
+        <span className="w-[76px] text-right" role="columnheader">Start</span>
+        <span className="w-[76px] text-right" role="columnheader">Finish</span>
+        <span className="w-[84px] pl-3" role="columnheader">Progress</span>
+      </div>
+    );
+  }
   return (
     <div className="flex w-full items-center px-3 pb-2" role="row">
       <span className="flex-1" role="columnheader">Task</span>
@@ -281,13 +344,59 @@ function ListHeader({ presenting }: { presenting: boolean }) {
   );
 }
 
-const ListRow = memo(function ListRow({ row, index, top, height, s, o, simulatedActive, selected, dim, presenting, isGoLive, onSelect, onToggle, onKey }: {
+const ListRow = memo(function ListRow({ row, index, top, height, s, o, simulatedActive, selected, dim, presenting, exec, isGoLive, onSelect, onToggle, onKey }: {
   row: Row; index: number; top: number; height: number; s?: TaskSchedule; o?: TaskSchedule;
-  simulatedActive: boolean; changed: boolean; selected: boolean; dim: boolean; presenting: boolean; isGoLive: boolean;
+  simulatedActive: boolean; changed: boolean; selected: boolean; dim: boolean; presenting: boolean; exec: boolean; isGoLive: boolean;
   onSelect: (additive: boolean) => void; onToggle: () => void; onKey: (e: KeyboardEvent<HTMLDivElement>) => void;
 }) {
   const t = row.task;
   const finishMoved = simulatedActive && s && o && Math.abs(s.ef - o.ef) > 1e-6;
+  if (exec) {
+    const keyDate = row.depth > 0;
+    const pct = Math.round(Math.min(100, Math.max(0, t.percentComplete)));
+    return (
+      <div
+        role="row"
+        aria-selected={selected}
+        aria-level={row.depth + 1}
+        tabIndex={0}
+        data-row={index}
+        data-uid={row.uid}
+        onClick={(e) => onSelect(e.ctrlKey || e.metaKey || e.shiftKey)}
+        onKeyDown={onKey}
+        className={cx(
+          'absolute left-0 flex w-full cursor-default items-center border-b border-rule px-3 outline-none focus-visible:bg-raised focus-visible:shadow-[inset_2px_0_0_var(--color-ink)]',
+          selected ? 'bg-active' : 'hover:bg-raised',
+        )}
+        style={{ top, height }}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-2" style={{ paddingLeft: keyDate ? 18 : 0 }}>
+          {keyDate ? (
+            <span className={cx('h-2 w-2 shrink-0 rotate-45', isGoLive ? 'bg-ink' : 'bg-ink-3')} aria-hidden="true" />
+          ) : (
+            <span className={cx('h-3 w-1 shrink-0 rounded-[1px]', pct >= 100 ? 'bg-bar-done' : 'bg-bar')} aria-hidden="true" />
+          )}
+          <span className={cx('truncate', keyDate ? (isGoLive ? 'font-semibold' : 'text-ink-2') : 'font-semibold')} title={t.name}>{t.name}</span>
+        </div>
+        <span className="num w-[76px] shrink-0 text-right text-ink-2">{keyDate ? '' : s ? formatDate(s.es, { year: false }) : '—'}</span>
+        <span className={cx('num w-[76px] shrink-0 text-right', finishMoved ? 'font-medium text-late-ink' : keyDate && isGoLive ? 'font-semibold text-ink' : 'text-ink-2')}>
+          {s ? formatDate(s.ef, { year: false }) : '—'}
+        </span>
+        <span className="flex w-[84px] shrink-0 items-center gap-1.5 pl-3">
+          {keyDate ? (
+            <span className={cx('text-[12px]', pct >= 100 ? 'text-ok' : 'text-ink-3')}>{pct >= 100 ? 'Done' : ''}</span>
+          ) : (
+            <>
+              <span className="h-1.5 w-9 overflow-hidden rounded-full bg-active" aria-hidden="true">
+                <span className="block h-full rounded-full bg-bar" style={{ width: `${pct}%` }} />
+              </span>
+              <span className="num text-[12px] text-ink-2">{pct}%</span>
+            </>
+          )}
+        </span>
+      </div>
+    );
+  }
   return (
     <div
       role="row"
@@ -338,7 +447,7 @@ const ListRow = memo(function ListRow({ row, index, top, height, s, o, simulated
   );
 });
 
-function TimelineHeader({ scale, today }: { scale: Scale; today: number }) {
+function TimelineHeader({ scale, today, goLive }: { scale: Scale; today: number; goLive?: number }) {
   return (
     <svg width={scale.width} height={HEADER_H} className="block shrink-0 border-b border-line bg-surface" aria-hidden="true">
       <rect width={scale.width} height={HEADER_H} fill="var(--color-surface)" />
@@ -361,14 +470,21 @@ function TimelineHeader({ scale, today }: { scale: Scale; today: number }) {
           <text x={scale.x(today)} y={37.5} fontSize={11} fontWeight={600} fill="#fff" textAnchor="middle">Today</text>
         </g>
       )}
+      {goLive !== undefined && goLive > scale.start && goLive < scale.end && Math.abs(scale.x(goLive) - scale.x(today)) > 50 && (
+        <g data-testid="golive-tag">
+          <rect x={scale.x(goLive) - 25} y={25} width={50} height={17} rx={3} fill="var(--color-ink)" />
+          <text x={scale.x(goLive)} y={37.5} fontSize={11} fontWeight={600} fill="#fff" textAnchor="middle">Go-Live</text>
+        </g>
+      )}
     </svg>
   );
 }
 
-const Bar = memo(function Bar({ task, s, y, g, scale, state, selected, dim, cmp, isGoLive, showName, onSelect }: {
+const Bar = memo(function Bar({ task, s, y, g, scale, state, selected, dim, cmp, isGoLive, exec, keyDate, showName, onSelect }: {
   task: Task; s: TaskSchedule; y: number; g: Geometry; scale: Scale; state: BarState; selected: boolean; dim: boolean;
-  cmp: { a: number; b: number } | null; isGoLive: boolean; showName: boolean; onSelect: (e: MouseEvent) => void;
+  cmp: { a: number; b: number } | null; isGoLive: boolean; exec: boolean; keyDate: boolean; showName: boolean; onSelect: (e: MouseEvent) => void;
 }) {
+  if (exec) return <ExecBar task={task} s={s} y={y} g={g} scale={scale} state={state} selected={selected} cmp={cmp} isGoLive={isGoLive} keyDate={keyDate} showName={showName} onSelect={onSelect} />;
   const x1 = scale.x(s.es);
   const x2 = scale.x(s.ef);
   const w = Math.max(2, x2 - x1);
@@ -444,6 +560,69 @@ const Bar = memo(function Bar({ task, s, y, g, scale, state, selected, dim, cmp,
     </g>
   );
 });
+
+/** Executive view: phases as solid labelled bars, key dates as diamonds at their finish. */
+function ExecBar({ task, s, y, g, scale, state, selected, cmp, isGoLive, keyDate, showName, onSelect }: {
+  task: Task; s: TaskSchedule; y: number; g: Geometry; scale: Scale; state: BarState; selected: boolean;
+  cmp: { a: number; b: number } | null; isGoLive: boolean; keyDate: boolean; showName: boolean; onSelect: (e: MouseEvent) => void;
+}) {
+  const x1 = scale.x(s.es);
+  const x2 = scale.x(s.ef);
+  const w = Math.max(3, x2 - x1);
+  const mid = y + g.barY + g.barH / 2;
+  const title = `${task.name}\n${formatDate(s.es, { weekday: true })} → ${formatDate(s.ef, { weekday: true })}`;
+  const tone = state === 'scenario' ? 'var(--color-sim)' : state === 'changed' ? 'var(--color-late)' : null;
+
+  if (keyDate) {
+    const x = x2;
+    const r = isGoLive ? g.barH * 0.55 : g.barH * 0.42;
+    const label = `${showName ? `${task.name} · ` : ''}${shortDate(s.ef)}`;
+    return (
+      <g data-uid={task.uid} data-state={state} onClick={onSelect} style={{ cursor: 'pointer' }}>
+        <title>{title}</title>
+        <rect x={x - 12} y={y + 2} width={24 + label.length * 7} height={g.rowH - 4} fill="transparent" />
+        {cmp && <path d={`M${scale.x(cmp.b)} ${mid - r} l${r} ${r} l${-r} ${r} l${-r} ${-r}z`} fill="none" stroke="var(--color-ink-2)" strokeDasharray="2 2" data-testid="compare-bar" />}
+        <path d={`M${x} ${mid - r} L${x + r} ${mid} L${x} ${mid + r} L${x - r} ${mid}z`} fill={tone ?? (isGoLive ? 'var(--color-ink)' : 'var(--color-ink-2)')} stroke={selected ? 'var(--color-ink)' : 'var(--color-surface)'} strokeWidth={1.5} />
+        <text x={x + r + 6} y={mid + 4} fontSize={12} fontWeight={isGoLive ? 600 : 500} fill={state === 'changed' ? 'var(--color-late-ink)' : isGoLive ? 'var(--color-ink)' : 'var(--color-ink-2)'} className="num" style={{ pointerEvents: 'none' }}>
+          {label}
+        </text>
+      </g>
+    );
+  }
+
+  const done = Math.min(100, Math.max(0, task.percentComplete));
+  const range = `${shortDate(s.es)} – ${shortDate(s.ef)}`;
+  const inside = range.length * 6.6 + 16 < w;
+  const outside = `${showName ? `${task.name}  ` : ''}${inside ? '' : range}`;
+  return (
+    <g data-uid={task.uid} data-state={state} onClick={onSelect} style={{ cursor: 'pointer' }}>
+      <title>{title}</title>
+      <rect x={x1 - 6} y={y + 2} width={w + 12} height={g.rowH - 4} fill="transparent" />
+      {cmp && <rect x={scale.x(cmp.a)} y={y + g.cmpY} width={Math.max(2, scale.x(cmp.b) - scale.x(cmp.a))} height={g.cmpH} rx={1.5} fill="none" stroke="var(--color-ink-2)" strokeDasharray="3 2" data-testid="compare-bar" />}
+      <rect className="bar-move" x={x1} y={y + g.barY} width={w} height={g.barH} rx={4} fill={tone ?? 'var(--color-bar-plan)'} />
+      {!tone && done > 0 && <rect x={x1} y={y + g.barY} width={(w * done) / 100} height={g.barH} rx={4} fill="var(--color-bar)" />}
+      {!tone && done > 0 && done < 100 && <rect x={x1 + (w * done) / 100 - 4} y={y + g.barY} width={4} height={g.barH} fill="var(--color-bar)" />}
+      {selected && <rect x={x1 - 2.5} y={y + g.barY - 2.5} width={w + 5} height={g.barH + 5} rx={5.5} fill="none" stroke="var(--color-ink)" strokeWidth={1} />}
+      {inside && (
+        <g className="num" fontSize={12} fontWeight={500} style={{ pointerEvents: 'none' }}>
+          {/* dark text over the remaining part, white over the completed part */}
+          <text x={x1 + 8} y={mid + 4} fill={tone ? '#fff' : 'var(--color-bar-done)'}>{range}</text>
+          {!tone && done > 0 && (
+            <>
+              <clipPath id={`done-${task.uid}`}><rect x={x1} y={y} width={(w * done) / 100} height={g.rowH} /></clipPath>
+              <text x={x1 + 8} y={mid + 4} fill="#fff" clipPath={`url(#done-${task.uid})`}>{range}</text>
+            </>
+          )}
+        </g>
+      )}
+      {outside && (
+        <text x={x1 + w + 8} y={mid + 4} fontSize={12} fill="var(--color-ink-2)" className="num" style={{ pointerEvents: 'none' }}>
+          {outside}
+        </text>
+      )}
+    </g>
+  );
+}
 
 function Links({ project, rows, rowIndex, first, last, result, scale, g, collapsed, chain, criticalOnly }: {
   project: Project; rows: Row[]; rowIndex: Map<number, number>; first: number; last: number;

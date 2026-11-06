@@ -32,16 +32,20 @@ describe('predecessor text', () => {
 });
 
 describe('task edits', () => {
-  it('a duration change recalculates successors without touching the input', () => {
+  it('a duration change moves only that task’s finish', () => {
     const r = applyTaskEdit(p, 10, { duration: 7 });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(iso(schedule(r.project).byUid.get(20)!.es)).toBe('2027-01-13T08:00:00');
+    expect(iso(r.project.tasks[0]!.finish)).toBe('2027-01-12T17:00:00');
+    expect(iso(schedule(r.project).byUid.get(20)!.es)).toBe(iso(schedule(p).byUid.get(20)!.es));
     expect(p.tasks[0]!.duration).toBe(5);
   });
-  it('a start edit adds a Start No Earlier Than constraint', () => {
+  it('a start edit moves the task and keeps its length', () => {
     const r = applyTaskEdit(p, 10, { start: at(2027, 1, 11) });
-    expect(r.ok && r.project.tasks[0]!.constraint).toEqual({ type: 'SNET', date: at(2027, 1, 11) });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(iso(r.project.tasks[0]!.start)).toBe('2027-01-11T08:00:00');
+    expect(iso(r.project.tasks[0]!.finish)).toBe('2027-01-15T17:00:00');
   });
   it('a finish edit changes the duration to fit', () => {
     const r = applyTaskEdit(p, 10, { finish: { value: at(2027, 1, 12, 0), currentStart: at(2027, 1, 4) } });

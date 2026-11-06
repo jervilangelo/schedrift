@@ -5,7 +5,7 @@ import { dayOf } from '../scheduling/time';
 
 export interface TaskPatch {
   name?: string;
-  /** New planned start: auto-scheduled tasks get a Start No Earlier Than constraint (as in MS Project). */
+  /** New planned start: the task moves and keeps its length; other tasks do not move. */
   start?: Instant;
   /** New planned finish: the duration is changed to fit. Requires the current calculated start. */
   finish?: { value: Instant; currentStart: Instant };
@@ -55,6 +55,18 @@ export function formatPredecessors(t: Task, project: Project): string {
   return t.predecessors.map((l) => formatLink(l, project)).join('; ');
 }
 
+function calendarOf(project: Project, t: Task) {
+  const net = buildNetwork(project);
+  return (t.calendarUid !== null && net.calendars.get(t.calendarUid)) || net.defaultCal;
+}
+
+/** Finish instant of a task starting at `start` that lasts `days` working days. */
+function finishAfter(project: Project, t: Task, start: Instant, days: number): Instant {
+  if (days <= 0) return start;
+  const cal = calendarOf(project, t);
+  return cal.fromOrdFinish(cal.toOrd(start) + days);
+}
+
 /** Applies a patch to one task, validating it. Never mutates the input project. */
 export function applyTaskEdit(project: Project, uid: number, patch: TaskPatch): EditResult {
   const idx = project.tasks.findIndex((t) => t.uid === uid);
@@ -73,6 +85,7 @@ export function applyTaskEdit(project: Project, uid: number, patch: TaskPatch): 
     t.duration = Math.round(patch.duration * 1000) / 1000;
     if (t.duration > 0 && t.milestone && old.duration === 0) t.milestone = false;
     if (t.duration === 0) t.milestone = true;
+    t.finish = finishAfter(project, t, t.start, t.duration);
   }
   if (patch.start !== undefined) {
     if (!Number.isFinite(patch.start)) return { ok: false, error: 'Invalid start date.' };
@@ -80,22 +93,20 @@ export function applyTaskEdit(project: Project, uid: number, patch: TaskPatch): 
     if (t.actualStart !== undefined || t.percentComplete > 0) {
       return { ok: false, error: `“${t.name}” has already started, so its start is its actual start date. To plan it from a new date, change its Status to “Not started” first.` };
     }
-    if (t.manual) {
-      const shift = patch.start - t.start;
-      t.start = patch.start;
-      t.finish += shift;
-    } else {
-      t.constraint = { type: 'SNET', date: patch.start };
-    }
+    // Dates are kept as given: the task moves, keeping its working-day length; nothing else moves.
+    const cal = calendarOf(project, t);
+    const length = Math.max(0, cal.toOrd(t.finish) - cal.toOrd(t.start));
+    t.start = cal.fromOrdStart(cal.toOrd(patch.start));
+    t.finish = finishAfter(project, t, t.start, length);
   }
   if (patch.finish !== undefined) {
     if (t.summary) return { ok: false, error: 'Summary task dates come from their subtasks.' };
-    const net = buildNetwork(project);
-    const cal = (t.calendarUid !== null && net.calendars.get(t.calendarUid)) || net.defaultCal;
+    const cal = calendarOf(project, t);
     const endOfDay = dayOf(patch.finish.value) + project.dayEndHours / 24;
     const d = cal.toOrd(endOfDay) - cal.toOrd(patch.finish.currentStart);
     if (d < 0) return { ok: false, error: 'The finish cannot be before the start.' };
     t.duration = Math.round(d * 1000) / 1000;
+    t.finish = finishAfter(project, t, t.start, t.duration);
   }
   if (patch.percentComplete !== undefined) {
     const pc = Math.round(patch.percentComplete);
@@ -106,7 +117,10 @@ export function applyTaskEdit(project: Project, uid: number, patch: TaskPatch): 
   }
   if (patch.milestone !== undefined) {
     t.milestone = patch.milestone;
-    if (patch.milestone && !t.summary) t.duration = 0;
+    if (patch.milestone && !t.summary) {
+      t.duration = 0;
+      t.finish = t.start;
+    }
   }
   if (patch.constraint !== undefined) t.constraint = patch.constraint;
   if (patch.status !== undefined) {
@@ -116,7 +130,6 @@ export function applyTaskEdit(project: Project, uid: number, patch: TaskPatch): 
       t.percentComplete = 0;
       t.actualStart = undefined;
       t.actualFinish = undefined;
-      if (!t.manual && (t.constraint.type === 'ASAP' || t.constraint.type === 'SNET')) t.constraint = { type: 'SNET', date: start };
     } else if (value === 'In progress') {
       t.actualStart = t.actualStart ?? start;
       t.actualFinish = undefined;

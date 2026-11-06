@@ -199,9 +199,9 @@ function ScheduleCheckDetails({ uids, onFind }: { uids: number[]; onFind: (id: n
     const s = original.byUid.get(t.uid);
     if (!s) return '—';
     const d = s.driver;
-    if (d.kind === 'link') return `Follows “${byUid.get(d.predUid)?.name ?? d.predUid}” (${d.type})`;
+    if (d.kind === 'link') return `Right after “${byUid.get(d.predUid)?.name ?? d.predUid}” (${d.type})`;
     if (d.kind === 'constraint') return `${t.constraint.type} constraint${t.constraint.date !== undefined ? ` on ${formatDate(t.constraint.date)}` : ''}`;
-    if (d.kind === 'projectStart') return 'Project start (no predecessor drives it)';
+    if (d.kind === 'file') return 'Dates from the project file';
     if (d.kind === 'actual') return 'Actual dates / progress';
     if (d.kind === 'manual') return 'Manually scheduled (pinned)';
     return d.kind;
@@ -276,7 +276,7 @@ function ValidationPanel({ issues, check }: { issues: ReportItem[]; check?: { co
         <span className={cx('text-[13px]', errors ? 'text-late-ink' : 'text-ink-2')}>{errors} {errors === 1 ? 'error' : 'errors'}</span>
         <span className={cx('text-[13px]', warnings ? 'text-sim-ink' : 'text-ink-2')}>{warnings} {warnings === 1 ? 'warning' : 'warnings'}</span>
         {check && (
-          <span className="num text-[13px] text-ink-2" title="Tasks whose dates Schedrift recalculates exactly as in the imported file">
+          <span className="num text-[13px] text-ink-2" title="Tasks that show the same dates as the imported file">
             Schedule check: {check.matched} of {check.compared} tasks match the file
           </span>
         )}
@@ -427,7 +427,7 @@ function DependencyDialog({ task, onClose }: { task: Task; onClose: () => void }
       {error && <p className="mt-3 rounded-[6px] bg-late-soft px-3 py-2 text-[13px] text-late-ink" role="alert">{error}</p>}
       <div className="mt-4 flex justify-end gap-2 border-t border-line pt-3">
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="primary" onClick={save} data-testid="save-dependencies">Apply and recalculate</Button>
+        <Button variant="primary" onClick={save} data-testid="save-dependencies">Apply</Button>
       </div>
     </Dialog>
   );

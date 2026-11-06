@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { schedule } from '../../src/scheduling/engine';
+import { brokenLinks, schedule } from '../../src/scheduling/engine';
 import { analyzeImpact } from '../../src/scheduling/impact';
 import { findCycles, validateProject } from '../../src/scheduling/validate';
 import { formatInstantISO as iso } from '../../src/scheduling/time';
@@ -139,10 +139,10 @@ describe('delay simulation', () => {
   });
 });
 
-describe('progress and constraints', () => {
+describe('progress and file dates', () => {
   it('keeps completed actual dates fixed', () => {
     const p = makeProject([
-      { uid: 1, dur: 5, pct: 100, actualStart: at(2027, 1, 5), actualFinish: at(2027, 1, 12, 17) },
+      { uid: 1, dur: 5, pct: 100, actualStart: at(2027, 1, 5), actualFinish: at(2027, 1, 12, 17), start: at(2027, 1, 5), finish: at(2027, 1, 12, 17) },
       { uid: 2, dur: 2, preds: [1] },
     ]);
     const orig = schedule(p);
@@ -158,36 +158,34 @@ describe('progress and constraints', () => {
     expect(dates(sim, 1)).toEqual(['2027-01-04T08:00:00', '2027-01-12T17:00:00']);
     expect(dates(sim, 2)[0]).toBe('2027-01-13T08:00:00');
   });
-  it('SNET pushes a task later', () => {
-    const r = schedule(makeProject([{ uid: 1, dur: 1, constraint: { type: 'SNET', date: at(2027, 1, 13) } }]));
-    expect(dates(r, 1)[0]).toBe('2027-01-13T08:00:00');
-  });
-  it('MFO pins Go-Live and produces negative float when logic is later', () => {
+  it('uses the start and finish from the file, not the duration or constraints', () => {
     const p = makeProject([
       { uid: 1, dur: 5 },
-      { uid: 2, name: 'Go-Live', milestone: true, preds: [1], constraint: { type: 'MFO', date: at(2027, 1, 8, 17) } },
+      { uid: 2, dur: 2, preds: [1], start: at(2027, 1, 20), finish: at(2027, 1, 26, 17), constraint: { type: 'MSO', date: at(2027, 2, 1) } },
     ]);
-    const orig = schedule(p);
-    const scenario = { items: [{ uid: 1, startDelay: 2, durationDelta: 0 }] };
-    const sim = schedule(p, scenario, orig);
-    expect(dates(sim, 2)[0]).toBe('2027-01-08T17:00:00');
-    expect(sim.byUid.get(1)!.totalFloat).toBeCloseTo(-2);
-    const impact = analyzeImpact(p, orig, sim, scenario, 2);
-    expect(impact.goLive!.constrainedLogicDate).toBeDefined();
-    expect(impact.summary).toMatch(/fixed by a constraint/);
+    const r = schedule(p);
+    expect(dates(r, 2)).toEqual(['2027-01-20T08:00:00', '2027-01-26T17:00:00']);
+    expect(r.byUid.get(2)!.duration).toBeCloseTo(5);
   });
-  it('FNLT deadline creates negative float without moving the task', () => {
-    const r = schedule(makeProject([{ uid: 1, dur: 5, constraint: { type: 'FNLT', date: at(2027, 1, 6, 17) } }]));
-    expect(r.byUid.get(1)!.totalFloat).toBeCloseTo(-2);
-    expect(r.byUid.get(1)!.critical).toBe(true);
-  });
-  it('manually scheduled tasks stay pinned unless simulated directly', () => {
-    const p = makeProject([{ uid: 1, dur: 5 }, { uid: 2, dur: 2, preds: [1], manual: true, start: at(2027, 1, 18) }]);
+  it('a gap before a successor absorbs a delay; only the excess pushes it', () => {
+    // T2 starts Mon 18 Jan although T1 finishes Fri 8 Jan: a 5-day gap.
+    const p = makeProject([{ uid: 1, dur: 5 }, { uid: 2, dur: 2, preds: [1], start: at(2027, 1, 18) }]);
     const orig = schedule(p);
-    expect(dates(orig, 2)[0]).toBe('2027-01-18T08:00:00');
-    const sim = schedule(p, { items: [{ uid: 1, startDelay: 10, durationDelta: 0 }] }, orig);
-    expect(dates(sim, 2)[0]).toBe('2027-01-18T08:00:00');
-    expect(sim.byUid.get(2)!.conflict).toBeDefined();
+    expect(orig.byUid.get(1)!.totalFloat).toBeCloseTo(5);
+    const small = schedule(p, { items: [{ uid: 1, startDelay: 3, durationDelta: 0 }] }, orig);
+    expect(dates(small, 2)[0]).toBe('2027-01-18T08:00:00');
+    const big = schedule(p, { items: [{ uid: 1, startDelay: 7, durationDelta: 0 }] }, orig);
+    expect(dates(big, 2)[0]).toBe('2027-01-20T08:00:00');
+    expect(big.byUid.get(2)!.driver).toMatchObject({ kind: 'link', predUid: 1 });
+  });
+  it('keeps dates that break a link and passes on only further slippage', () => {
+    // T2 starts Wed 6 Jan although T1 only finishes Fri 8 Jan: it overlaps by 3 days.
+    const p = makeProject([{ uid: 1, dur: 5 }, { uid: 2, dur: 2, preds: [1], start: at(2027, 1, 6) }]);
+    const orig = schedule(p);
+    expect(dates(orig, 2)[0]).toBe('2027-01-06T08:00:00');
+    expect(brokenLinks(p, orig)).toEqual([{ predUid: 1, succUid: 2, days: 3 }]);
+    const sim = schedule(p, { items: [{ uid: 1, startDelay: 2, durationDelta: 0 }] }, orig);
+    expect(dates(sim, 2)[0]).toBe('2027-01-08T08:00:00');
   });
 });
 
@@ -213,6 +211,18 @@ describe('summary tasks', () => {
     expect(r.byUid.get(11)!.totalFloat).toBeCloseTo(2);
     expect(r.byUid.get(10)!.critical).toBe(true);
   });
+  it('a link into a summary that its children already overlap only passes on further slippage', () => {
+    const m = makeProject([
+      { uid: 1, dur: 3, start: at(2027, 1, 11) },
+      { uid: 10, name: 'Phase', summary: true, manual: true, preds: [1] },
+      { uid: 11, dur: 2, parent: 10, start: at(2027, 1, 4) },
+    ]);
+    const orig = schedule(m);
+    expect(dates(orig, 11)[0]).toBe('2027-01-04T08:00:00');
+    expect(brokenLinks(m, orig)).toEqual([{ predUid: 1, succUid: 10, days: 8 }]);
+    const sim = schedule(m, { items: [{ uid: 1, startDelay: 2, durationDelta: 0 }] }, orig);
+    expect(dates(sim, 11)[0]).toBe('2027-01-06T08:00:00');
+  });
 });
 
 describe('validation', () => {
@@ -236,7 +246,7 @@ describe('validation', () => {
     expect(codes).toContain('self-link');
   });
   it('schedules around excluded cyclic links', () => {
-    const p = makeProject([{ uid: 1, dur: 2, preds: [2] }, { uid: 2, dur: 2, preds: [1] }], {
+    const p = makeProject([{ uid: 1, dur: 2, preds: [2], start: at(2027, 1, 4) }, { uid: 2, dur: 2, preds: [1], start: at(2027, 1, 6) }], {
       excludedLinks: [{ predUid: 2, succUid: 1 }],
     });
     const r = schedule(p);

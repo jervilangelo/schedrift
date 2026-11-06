@@ -1,5 +1,5 @@
 import type { Project, ReportItem } from '../model/types';
-import { schedule } from '../scheduling/engine';
+import { brokenLinks, schedule } from '../scheduling/engine';
 import { detectGoLive } from '../scheduling/impact';
 import { cyclicLinks, validateProject } from '../scheduling/validate';
 import { ImportError, parseMspdi } from './mspdi';
@@ -42,6 +42,17 @@ export function finalizeImport(project: Project): Project {
       code: 'schedule-check',
       message: `Schedrift's recalculation differs from the file's dates for ${mismatched.length} of ${compared} tasks. Simulations use the recalculated dates; open Project data (top bar) to see which tasks and why.`,
       taskUids: mismatched,
+    });
+  }
+  const broken = brokenLinks(p, result);
+  if (broken.length) {
+    const names = (uid: number) => p.tasks.find((t) => t.uid === uid)?.name ?? String(uid);
+    const shown = broken.slice(0, 5).map((b) => `${names(b.predUid)} → ${names(b.succUid)} (${b.days} d)`).join('; ');
+    items.push({
+      level: 'info',
+      code: 'broken-links',
+      message: `${broken.length} link(s) are not respected by the file's own dates. The dates are kept as they are; in a simulation the existing overlap stays and only extra slippage is passed on: ${shown}${broken.length > 5 ? '; …' : ''}.`,
+      taskUids: [...new Set(broken.flatMap((b) => [b.predUid, b.succUid]))],
     });
   }
   p.goLiveUid = detectGoLive(p, result);

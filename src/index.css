@@ -28,6 +28,7 @@
   --color-bar: #3e8a7e;
   --color-bar-done: #2b665d;
   --color-bar-soft: #d7e9e5;
+  --color-bar-plan: #b9dad3;
   --color-summary: #2f3a40;
   --color-sim: #d39222;
   --color-sim-ink: #8a5a06;
@@ -112,3 +113,38 @@ input[type='number']::-webkit-inner-spin-button {
 dialog::backdrop {
   background: rgb(31 34 38 / 0.35);
 }
+
+/* Delay sliders: thin track that fills up to the value, round thumb. */
+.delay-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  --pct: 0%;
+}
+.delay-range:focus { outline: none; }
+.delay-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--color-sim) var(--pct), var(--color-active) var(--pct));
+}
+.delay-range::-moz-range-track { height: 4px; border-radius: 2px; background: var(--color-active); }
+.delay-range::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--color-sim); }
+.delay-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--color-surface, #fff);
+  border: 2px solid var(--color-sim);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+}
+.delay-range::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-surface, #fff);
+  border: 2px solid var(--color-sim);
+}
+.delay-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgb(211 146 34 / 0.3); }
+.delay-range:disabled::-webkit-slider-thumb { border-color: var(--color-control); }
