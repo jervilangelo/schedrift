@@ -1,6 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
 <title id="title">Schedrift — complex schedules, clear decisions</title>
-<desc id="desc">An editorial product banner showing a clean, presentation-ready Gantt chart.</desc>
+<desc id="desc">An editorial product banner showing a clean Gantt chart with gently revealing task bars, a moving Go-Live guide and a subtle milestone highlight. Animation stops for reduced-motion preferences.</desc>
+<style>
+/* Static artwork is the default fallback; animations are progressive enhancement. */
+@keyframes bar-reveal { 0% { transform: scaleX(.08); opacity: .3; } 18%, 100% { transform: scaleX(1); opacity: 1; } }
+@keyframes progress-reveal { 0%, 8% { transform: scaleX(.02); } 30%, 100% { transform: scaleX(1); } }
+@keyframes milestone-breathe { 0%, 70%, 100% { opacity: 0; transform: scale(0.6); } 79% { opacity: .33; } 94% { opacity: 0; transform: scale(2.1); } }
+@keyframes timeline-travel { to { stroke-dashoffset: -40; } }
+@keyframes label-glow { 0%, 70%, 100% { opacity: 1; } 82% { opacity: .73; } }
+.task-bar { transform-box: fill-box; transform-origin: left center; animation: bar-reveal 7s cubic-bezier(.2,.75,.2,1) infinite; }
+.task-two { animation-delay: .25s; }
+.task-three { animation-delay: .5s; }
+.progress-bar { transform-box: fill-box; transform-origin: left center; animation: progress-reveal 7s cubic-bezier(.2,.75,.2,1) infinite; }
+.progress-two { animation-delay: .32s; }
+.progress-three { animation-delay: .58s; }
+.milestone-halo { transform-box: fill-box; transform-origin: center center; animation: milestone-breathe 7s ease-out infinite; }
+.go-live-line { animation: timeline-travel 8s linear infinite; }
+.go-live-label { animation: label-glow 7s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+ .task-bar, .progress-bar, .milestone-halo, .go-live-line, .go-live-label { animation: none !important; }
+}
+</style>
 <rect width="1200" height="480" rx="24" fill="#F5F5F2"/>
 <path d="M0 410H1200" stroke="#E5E7E3"/>
 <g transform="translate(68 59)">
@@ -33,12 +53,13 @@
 <text x="26" y="169">Discovery</text><text x="26" y="218">Build &amp; test</text><text x="26" y="267">UAT</text><text x="26" y="316">Go-Live</text>
 </g>
 <g stroke="#EEF1EF"><line x1="192" y1="146" x2="192" y2="325"/><line x1="272" y1="146" x2="272" y2="325"/><line x1="352" y1="146" x2="352" y2="325"/><line x1="432" y1="146" x2="432" y2="325"/></g>
-<rect x="179" y="153" width="156" height="18" rx="5" fill="#3E8A7E"/>
-<rect x="217" y="202" width="196" height="18" rx="5" fill="#D9E2DE"/><rect x="217" y="202" width="114" height="18" rx="5" fill="#3E8A7E"/>
-<rect x="306" y="251" width="148" height="18" rx="5" fill="#D9E2DE"/><rect x="306" y="251" width="51" height="18" rx="5" fill="#3E8A7E"/>
+<rect class="task-bar" x="179" y="153" width="156" height="18" rx="5" fill="#3E8A7E"/>
+<rect class="task-bar task-two" x="217" y="202" width="196" height="18" rx="5" fill="#D9E2DE"/><rect class="progress-bar progress-two" x="217" y="202" width="114" height="18" rx="5" fill="#3E8A7E"/>
+<rect class="task-bar task-three" x="306" y="251" width="148" height="18" rx="5" fill="#D9E2DE"/><rect class="progress-bar progress-three" x="306" y="251" width="51" height="18" rx="5" fill="#3E8A7E"/>
+<circle class="milestone-halo" cx="477" cy="309" r="10" fill="#3E8A7E"/>
 <path d="M477 298L488 309L477 320L466 309Z" fill="#1F2226"/>
-<path d="M488 305V143" stroke="#3E8A7E" stroke-width="2" stroke-dasharray="5 5"/>
-<rect x="429" y="124" width="92" height="22" rx="11" fill="#DFEAE5"/><text x="475" y="139" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="11" fill="#28695F">GO-LIVE</text>
+<path class="go-live-line" d="M488 305V143" stroke="#3E8A7E" stroke-width="2" stroke-dasharray="5 5"/>
+<rect class="go-live-label" x="429" y="124" width="92" height="22" rx="11" fill="#DFEAE5"/><text x="475" y="139" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="11" fill="#28695F">GO-LIVE</text>
 </g>
 <text x="68" y="449" font-family="Arial,Helvetica,sans-serif" font-size="13" letter-spacing="1.4" font-weight="700" fill="#6B7472">PLAN  ·  VISUALIZE  ·  SIMULATE  ·  PRESENT</text>
 <text x="1135" y="449" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="#6B7472">github.com/jervilangelo/schedrift</text>
