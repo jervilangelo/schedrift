@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
+<title id="title">Schedrift — complex schedules, clear decisions</title>
+<desc id="desc">An editorial product banner showing a clean, presentation-ready Gantt chart.</desc>
+<rect width="1200" height="480" rx="24" fill="#F5F5F2"/>
+<path d="M0 410H1200" stroke="#E5E7E3"/>
+<g transform="translate(68 59)">
+ <rect x="0" y="0" width="48" height="16" rx="4" fill="#1F2226"/>
+ <rect x="0" y="20" width="48" height="6" rx="2" fill="#1F2226"/>
+ <rect x="16" y="37" width="48" height="16" rx="4" fill="#3E8A7E"/>
+ <rect x="0" y="57" width="48" height="6" rx="2" fill="#1F2226"/>
+</g>
+<g font-family="Arial,Helvetica,sans-serif" fill="#1F2226">
+ <text x="152" y="106" font-weight="700" font-size="43" letter-spacing="-1.7">Schedrift</text>
+ <text x="68" y="193" font-weight="700" font-size="47" letter-spacing="-2.2">Complex schedules.</text>
+ <text x="68" y="246" font-weight="700" font-size="47" letter-spacing="-2.2" fill="#3E8A7E">Clear decisions.</text>
+ <text x="70" y="297" font-size="20" fill="#5B6263">Turn Microsoft Project schedules into</text>
+ <text x="70" y="326" font-size="20" fill="#5B6263">presentation-ready project timelines.</text>
+ <rect x="68" y="359" width="132" height="36" rx="18" fill="#1F2226"/>
+ <text x="134" y="383" font-weight="700" fill="#FFFFFF" font-size="12" text-anchor="middle" letter-spacing=".9">LOCAL-FIRST</text>
+ <rect x="211" y="359" width="142" height="36" rx="18" fill="#DFEAE5"/>
+ <text x="282" y="383" font-weight="700" fill="#28695F" font-size="12" text-anchor="middle" letter-spacing=".8">OPEN SOURCE</text>
+</g>
+<g transform="translate(600 63)">
+<rect x="0" y="0" width="534" height="344" rx="15" fill="#FFFFFF" stroke="#DFE3E1" stroke-width="2"/>
+<path d="M15 0H519Q534 0 534 15V58H0V15Q0 0 15 0Z" fill="#EEF1EF"/>
+<circle cx="22" cy="28" r="5" fill="#CED4D0"/><circle cx="40" cy="28" r="5" fill="#CED4D0"/><circle cx="58" cy="28" r="5" fill="#CED4D0"/>
+<text x="86" y="34" font-size="13" font-weight="700" fill="#1F2226" font-family="Arial,Helvetica,sans-serif">EXECUTIVE TIMELINE</text>
+<rect x="24" y="78" width="486" height="40" rx="8" fill="#F5F5F2"/>
+<text x="37" y="103" font-size="13" font-weight="700" fill="#1F2226" font-family="Arial,Helvetica,sans-serif">Project rollout</text>
+<text x="456" y="103" font-size="12" font-weight="700" fill="#3E8A7E" font-family="Arial,Helvetica,sans-serif">68%</text>
+<line x1="24" y1="137" x2="510" y2="137" stroke="#E7EBE8"/>
+<g font-family="Arial,Helvetica,sans-serif" font-size="12" fill="#5B6263">
+<text x="26" y="169">Discovery</text><text x="26" y="218">Build &amp; test</text><text x="26" y="267">UAT</text><text x="26" y="316">Go-Live</text>
+</g>
+<g stroke="#EEF1EF"><line x1="192" y1="146" x2="192" y2="325"/><line x1="272" y1="146" x2="272" y2="325"/><line x1="352" y1="146" x2="352" y2="325"/><line x1="432" y1="146" x2="432" y2="325"/></g>
+<rect x="179" y="153" width="156" height="18" rx="5" fill="#3E8A7E"/>
+<rect x="217" y="202" width="196" height="18" rx="5" fill="#D9E2DE"/><rect x="217" y="202" width="114" height="18" rx="5" fill="#3E8A7E"/>
+<rect x="306" y="251" width="148" height="18" rx="5" fill="#D9E2DE"/><rect x="306" y="251" width="51" height="18" rx="5" fill="#3E8A7E"/>
+<path d="M477 298L488 309L477 320L466 309Z" fill="#1F2226"/>
+<path d="M488 305V143" stroke="#3E8A7E" stroke-width="2" stroke-dasharray="5 5"/>
+<rect x="429" y="124" width="92" height="22" rx="11" fill="#DFEAE5"/><text x="475" y="139" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="11" fill="#28695F">GO-LIVE</text>
+</g>
+<text x="68" y="449" font-family="Arial,Helvetica,sans-serif" font-size="13" letter-spacing="1.4" font-weight="700" fill="#6B7472">PLAN  ·  VISUALIZE  ·  SIMULATE  ·  PRESENT</text>
+<text x="1135" y="449" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="#6B7472">github.com/jervilangelo/schedrift</text>
+</svg>
